@@ -1,0 +1,141 @@
+{% comment %}
+  TotalBundle - Sticky Add to Cart App Embed Block
+  Target: body (renders directly at page root for proper sticky behavior without section container constraints)
+{% endcomment %}
+
+{%- if product != blank -%}
+  {% render 'sticky-cart-component', block: block %}
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "Sticky Add to Cart",
+  "target": "body",
+  "javascript": "sticky-cart.js",
+  "stylesheet": "sticky-cart.css",
+  "settings": [
+    {
+      "type": "header",
+      "content": "Layout & Position"
+    },
+    {
+      "type": "select",
+      "id": "position",
+      "label": "Bar Position",
+      "options": [
+        { "value": "bottom", "label": "Bottom of screen" },
+        { "value": "top", "label": "Top of screen" }
+      ],
+      "default": "bottom"
+    },
+    {
+      "type": "select",
+      "id": "desktop_visibility",
+      "label": "Desktop Visibility",
+      "options": [
+        { "value": "scroll", "label": "Show after scrolling past product form (Recommended)" },
+        { "value": "always", "label": "Always visible" }
+      ],
+      "default": "scroll"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_on_mobile",
+      "label": "Show on mobile devices",
+      "default": true
+    },
+    {
+      "type": "header",
+      "content": "Display Elements"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_thumbnail",
+      "label": "Show product thumbnail",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_compare_at_price",
+      "label": "Show compare-at price & discount badge",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_quantity",
+      "label": "Show quantity selector",
+      "default": true
+    },
+    {
+      "type": "header",
+      "content": "Text & Content"
+    },
+    {
+      "type": "text",
+      "id": "button_text",
+      "label": "Add to Cart Button Text",
+      "default": "Add to Cart"
+    },
+    {
+      "type": "text",
+      "id": "sold_out_text",
+      "label": "Sold Out Button Text",
+      "default": "Sold Out"
+    },
+    {
+      "type": "header",
+      "content": "Colors & Styling"
+    },
+    {
+      "type": "color",
+      "id": "bg_color",
+      "label": "Bar Background Color",
+      "default": "#ffffff"
+    },
+    {
+      "type": "color",
+      "id": "text_color",
+      "label": "Bar Text Color",
+      "default": "#121212"
+    },
+    {
+      "type": "color",
+      "id": "button_bg_color",
+      "label": "Button Background Color",
+      "default": "#121212"
+    },
+    {
+      "type": "color",
+      "id": "button_text_color",
+      "label": "Button Text Color",
+      "default": "#ffffff"
+    },
+    {
+      "type": "color",
+      "id": "button_hover_bg_color",
+      "label": "Button Hover Background Color",
+      "default": "#2e2e2e"
+    },
+    {
+      "type": "range",
+      "id": "border_radius",
+      "min": 0,
+      "max": 32,
+      "step": 2,
+      "unit": "px",
+      "label": "Border Radius",
+      "default": 8
+    },
+    {
+      "type": "range",
+      "id": "padding",
+      "min": 8,
+      "max": 24,
+      "step": 2,
+      "unit": "px",
+      "label": "Bar Vertical Padding",
+      "default": 12
+    }
+  ]
+}
+{% endschema %}

@@ -1,0 +1,17 @@
+{
+  "sticky_cart": {
+    "bar_label": "Sticky add to cart bar",
+    "add_to_cart": "Add to Cart",
+    "sold_out": "Sold Out",
+    "unavailable": "Unavailable",
+    "adding": "Adding...",
+    "added": "Added to Cart!",
+    "quantity": "Quantity",
+    "increase_quantity": "Increase quantity",
+    "decrease_quantity": "Decrease quantity",
+    "select_variant": "Select variant",
+    "regular_price": "Regular price",
+    "sale_price": "Sale price",
+    "save": "Save"
+  }
+}
