@@ -32,3 +32,32 @@ model Session {
   refreshToken        String?
   refreshTokenExpires DateTime?
 }
+
+model Bundle {
+  id              String          @id @default(cuid())
+  shop            String
+  title           String
+  description     String?
+  status          String          @default("ACTIVE") // ACTIVE, DRAFT, ARCHIVED
+  discountType    String          @default("PERCENTAGE") // PERCENTAGE, FIXED_AMOUNT, TIERED
+  discountValue   Float           @default(10.0)
+  minQuantity     Int             @default(2)
+  tieredRulesJson String? // JSON array: [{"minQuantity": 2, "discount": 10}, {"minQuantity": 3, "discount": 20}, {"minQuantity": 4, "discount": 30}]
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  products        BundleProduct[]
+}
+
+model BundleProduct {
+  id           String   @id @default(cuid())
+  bundleId     String
+  bundle       Bundle   @relation(fields: [bundleId], references: [id], onDelete: Cascade)
+  productId    String // Shopify GID: gid://shopify/Product/123456789
+  productTitle String
+  productHandle String?
+  variantId    String? // Optional specific variant GID
+  imageSrc     String?
+  price        Float?
+  createdAt    DateTime @default(now())
+}
+
