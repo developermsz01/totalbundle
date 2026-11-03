@@ -421,6 +421,12 @@
   }
 }
 
+@media (min-width: 769px) {
+  .tb-hide-desktop {
+    display: none !important;
+  }
+}
+
 /* Reduced Motion Mode */
 @media (prefers-reduced-motion: reduce) {
   .tb-sticky-cart {

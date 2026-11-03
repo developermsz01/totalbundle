@@ -55,3 +55,4 @@ CREATE TABLE "BundleProduct" (
 
 -- AddForeignKey
 ALTER TABLE "BundleProduct" ADD CONSTRAINT "BundleProduct_bundleId_fkey" FOREIGN KEY ("bundleId") REFERENCES "Bundle"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+

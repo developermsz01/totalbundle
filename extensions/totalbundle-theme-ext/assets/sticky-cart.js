@@ -44,6 +44,7 @@
       this.desktopVisibility = this.container.getAttribute('data-desktop-visibility') || 'scroll';
       this.buttonText = this.container.getAttribute('data-button-text') || 'Add to Cart';
       this.soldOutText = this.container.getAttribute('data-sold-out-text') || 'Sold Out';
+      this.afterAddAction = this.container.getAttribute('data-after-add-action') || 'stay';
 
       // Current active variant
       this.selectedVariantId =
@@ -399,6 +400,15 @@
     }
 
     onAddToCartSuccess(itemData) {
+      if (this.afterAddAction === 'cart') {
+        window.location.href = '/cart';
+        return;
+      }
+      if (this.afterAddAction === 'checkout') {
+        window.location.href = '/checkout';
+        return;
+      }
+
       if (this.btnTextEl) {
         this.btnTextEl.textContent = 'Added to Cart!';
       }

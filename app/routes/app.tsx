@@ -30,9 +30,8 @@ export default function App() {
     <AppProvider isEmbeddedApp apiKey={apiKey}>
       <NavMenu>
         <Link to="/app" rel="home">
-          Dashboard
+          Sticky Cart
         </Link>
-        <Link to="/app/bundles">Bundle Studio</Link>
         <Link to="/app/additional">Documentation</Link>
       </NavMenu>
       <Outlet />

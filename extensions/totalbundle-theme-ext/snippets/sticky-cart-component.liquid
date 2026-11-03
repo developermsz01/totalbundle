@@ -4,33 +4,74 @@
 {% endcomment %}
 
 {%- liquid
+  assign app_settings = app.metafields.sticky_cart.settings.value
+  if app_settings == blank
+    assign app_settings = shop.metafields.sticky_cart.settings.value
+  endif
+
+  assign is_enabled = true
+  if app_settings != blank and app_settings.enabled == false
+    assign is_enabled = false
+  endif
+
   assign current_variant = product.selected_or_first_available_variant
-  assign position = block.settings.position | default: 'bottom'
-  assign desktop_visibility = block.settings.desktop_visibility | default: 'scroll'
-  assign show_on_mobile = block.settings.show_on_mobile
+  assign position = app_settings.position | default: block.settings.position | default: 'bottom'
+  assign desktop_visibility = app_settings.desktopVisibility | default: block.settings.desktop_visibility | default: 'scroll'
+
+  assign show_on_mobile = app_settings.showOnMobile
   if show_on_mobile == nil
-    assign show_on_mobile = true
+    assign show_on_mobile = block.settings.show_on_mobile
+    if show_on_mobile == nil
+      assign show_on_mobile = true
+    endif
   endif
-  assign show_thumbnail = block.settings.show_thumbnail
+
+  assign show_on_desktop = app_settings.showOnDesktop
+  if show_on_desktop == nil
+    assign show_on_desktop = true
+  endif
+
+  assign show_thumbnail = app_settings.showThumbnail
   if show_thumbnail == nil
-    assign show_thumbnail = true
+    assign show_thumbnail = block.settings.show_thumbnail
+    if show_thumbnail == nil
+      assign show_thumbnail = true
+    endif
   endif
-  assign show_compare_at = block.settings.show_compare_at_price
+
+  assign show_compare_at = app_settings.showCompareAtPrice
   if show_compare_at == nil
-    assign show_compare_at = true
+    assign show_compare_at = block.settings.show_compare_at_price
+    if show_compare_at == nil
+      assign show_compare_at = true
+    endif
   endif
-  assign show_quantity = block.settings.show_quantity
+
+  assign show_quantity = app_settings.showQuantity
   if show_quantity == nil
-    assign show_quantity = true
+    assign show_quantity = block.settings.show_quantity
+    if show_quantity == nil
+      assign show_quantity = true
+    endif
   endif
-  assign button_text = block.settings.button_text | default: 'Add to Cart'
-  assign sold_out_text = block.settings.sold_out_text | default: 'Sold Out'
+
+  assign button_text = app_settings.buttonText | default: block.settings.button_text | default: 'Add to Cart'
+  assign sold_out_text = app_settings.soldOutText | default: block.settings.sold_out_text | default: 'Sold Out'
+  assign after_add_action = app_settings.afterAddAction | default: 'stay'
+
+  assign bg_color = app_settings.bgColor | default: block.settings.bg_color | default: '#ffffff'
+  assign text_color = app_settings.textColor | default: block.settings.text_color | default: '#121212'
+  assign btn_bg = app_settings.buttonBgColor | default: block.settings.button_bg_color | default: '#121212'
+  assign btn_text = app_settings.buttonTextColor | default: block.settings.button_text_color | default: '#ffffff'
+  assign btn_hover = app_settings.buttonHoverBgColor | default: block.settings.button_hover_bg_color | default: '#2e2e2e'
+  assign border_radius = app_settings.borderRadius | default: block.settings.border_radius | default: 8
+  assign padding = app_settings.padding | default: block.settings.padding | default: 12
 -%}
 
-{%- if product != blank -%}
+{%- if is_enabled and product != blank -%}
 <aside
   id="totalbundle-sticky-cart"
-  class="tb-sticky-cart tb-sticky-cart--{{ position }} tb-sticky-cart--hidden"
+  class="tb-sticky-cart tb-sticky-cart--{{ position }} tb-sticky-cart--hidden{% unless show_on_desktop %} tb-hide-desktop{% endunless %}"
   role="region"
   aria-label="{{ 'sticky_cart.bar_label' | t | default: 'Sticky add to cart bar' }}"
   data-product-id="{{ product.id }}"
@@ -39,14 +80,15 @@
   data-show-on-mobile="{{ show_on_mobile }}"
   data-button-text="{{ button_text | escape }}"
   data-sold-out-text="{{ sold_out_text | escape }}"
+  data-after-add-action="{{ after_add_action }}"
   style="
-    --tb-bg-color: {{ block.settings.bg_color | default: '#ffffff' }};
-    --tb-text-color: {{ block.settings.text_color | default: '#121212' }};
-    --tb-btn-bg: {{ block.settings.button_bg_color | default: '#121212' }};
-    --tb-btn-text: {{ block.settings.button_text_color | default: '#ffffff' }};
-    --tb-btn-hover-bg: {{ block.settings.button_hover_bg_color | default: '#2e2e2e' }};
-    --tb-border-radius: {{ block.settings.border_radius | default: 8 }}px;
-    --tb-padding: {{ block.settings.padding | default: 12 }}px;
+    --tb-bg-color: {{ bg_color }};
+    --tb-text-color: {{ text_color }};
+    --tb-btn-bg: {{ btn_bg }};
+    --tb-btn-text: {{ btn_text }};
+    --tb-btn-hover-bg: {{ btn_hover }};
+    --tb-border-radius: {{ border_radius }}px;
+    --tb-padding: {{ padding }}px;
   "
 >
   <div class="tb-sticky-cart__inner">

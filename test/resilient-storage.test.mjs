@@ -2,9 +2,9 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { Session } from '@shopify/shopify-api';
 import { createResilientSessionStorage } from '../app/session-storage.server.ts';
-import db from '../app/db.server.ts';
+import { getStickyCartSettings, saveStickyCartSettings } from '../app/db.server.ts';
 
-describe('Resilient Session Storage & Database Fallback', () => {
+describe('Resilient Session Storage & Sticky Cart Settings', () => {
   it('stores and retrieves sessions from memory store without crashing when DB is offline', async () => {
     const storage = createResilientSessionStorage(null);
 
@@ -30,25 +30,23 @@ describe('Resilient Session Storage & Database Fallback', () => {
     assert.equal(byShop[0].shop, 'test_store.myshopify.com');
   });
 
-  it('db.server safely returns bundles without crashing when DATABASE_URL is not configured', async () => {
-    const bundles = await db.bundle.findMany();
-    assert.ok(Array.isArray(bundles), 'Bundles must be an array');
-    assert.ok(bundles.length >= 1, 'Should have pre-seeded sample bundles');
+  it('manages sticky cart settings per shop with safe defaults and persistence', () => {
+    const defaults = getStickyCartSettings('new-store.myshopify.com');
+    assert.equal(defaults.enabled, true);
+    assert.equal(defaults.position, 'bottom');
+    assert.equal(defaults.buttonText, 'Add to Cart');
 
-    const created = await db.bundle.create({
-      data: {
-        shop: 'demo.myshopify.com',
-        title: 'Flash Sale BOGO',
-        discountType: 'PERCENTAGE',
-        discountValue: 25,
-        minQuantity: 2,
-      },
+    const updated = saveStickyCartSettings('new-store.myshopify.com', {
+      buttonText: 'Buy Now With 1-Click',
+      position: 'top',
+      buttonBgColor: '#2563eb',
     });
 
-    assert.ok(created.id, 'Created bundle must have an id');
-    assert.equal(created.title, 'Flash Sale BOGO');
+    assert.equal(updated.buttonText, 'Buy Now With 1-Click');
+    assert.equal(updated.position, 'top');
+    assert.equal(updated.buttonBgColor, '#2563eb');
 
-    const found = await db.bundle.findUnique({ where: { id: created.id } });
-    assert.equal(found.id, created.id);
+    const reloaded = getStickyCartSettings('new-store.myshopify.com');
+    assert.equal(reloaded.buttonText, 'Buy Now With 1-Click');
   });
 });

@@ -3,44 +3,71 @@ import { PrismaClient } from "@prisma/client";
 declare global {
   var prismaGlobal: PrismaClient | undefined;
   var __memoryBundles: any[] | undefined;
+  var __memoryStickyCartSettings: Map<string, StickyCartSettings> | undefined;
 }
 
-const defaultSampleBundles = [
-  {
-    id: "bundle_volume_tiered",
-    shop: "",
-    title: "Volume Tiered Discount (Buy More, Save More)",
-    description: "Mix & match any 2 items for 10% off, 3 items for 20% off, or 4+ items for 30% off.",
-    status: "ACTIVE",
-    discountType: "TIERED",
-    discountValue: 20.0,
-    minQuantity: 2,
-    tieredRulesJson: JSON.stringify([
-      { minQuantity: 2, discount: 10 },
-      { minQuantity: 3, discount: 20 },
-      { minQuantity: 4, discount: 30 },
-    ]),
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    products: [],
-  },
-  {
-    id: "bundle_starter_pack",
-    shop: "",
-    title: "Starter Accessory Bundle",
-    description: "Get 15% off when you purchase at least 2 accessories together.",
-    status: "ACTIVE",
-    discountType: "PERCENTAGE",
-    discountValue: 15.0,
-    minQuantity: 2,
-    tieredRulesJson: null,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    products: [],
-  },
-];
+export interface StickyCartSettings {
+  enabled: boolean;
+  position: "bottom" | "top";
+  desktopVisibility: "scroll" | "always";
+  showOnMobile: boolean;
+  showOnDesktop: boolean;
+  showThumbnail: boolean;
+  showCompareAtPrice: boolean;
+  showQuantity: boolean;
+  buttonText: string;
+  soldOutText: string;
+  afterAddAction: "stay" | "cart" | "checkout";
+  bgColor: string;
+  textColor: string;
+  buttonBgColor: string;
+  buttonTextColor: string;
+  buttonHoverBgColor: string;
+  borderRadius: number;
+  padding: number;
+}
 
-const memoryBundles = globalThis.__memoryBundles || [...defaultSampleBundles];
+export const defaultStickyCartSettings: StickyCartSettings = {
+  enabled: true,
+  position: "bottom",
+  desktopVisibility: "scroll",
+  showOnMobile: true,
+  showOnDesktop: true,
+  showThumbnail: true,
+  showCompareAtPrice: true,
+  showQuantity: true,
+  buttonText: "Add to Cart",
+  soldOutText: "Sold Out",
+  afterAddAction: "stay",
+  bgColor: "#ffffff",
+  textColor: "#121212",
+  buttonBgColor: "#121212",
+  buttonTextColor: "#ffffff",
+  buttonHoverBgColor: "#2e2e2e",
+  borderRadius: 8,
+  padding: 12,
+};
+
+const settingsMap = globalThis.__memoryStickyCartSettings || new Map<string, StickyCartSettings>();
+globalThis.__memoryStickyCartSettings = settingsMap;
+
+export function getStickyCartSettings(shop: string): StickyCartSettings {
+  if (shop && settingsMap.has(shop)) {
+    return { ...defaultStickyCartSettings, ...settingsMap.get(shop) };
+  }
+  return { ...defaultStickyCartSettings };
+}
+
+export function saveStickyCartSettings(shop: string, settings: Partial<StickyCartSettings>): StickyCartSettings {
+  const current = getStickyCartSettings(shop);
+  const updated: StickyCartSettings = { ...current, ...settings };
+  if (shop) {
+    settingsMap.set(shop, updated);
+  }
+  return updated;
+}
+
+const memoryBundles = globalThis.__memoryBundles || [];
 globalThis.__memoryBundles = memoryBundles;
 
 let rawPrisma: PrismaClient | null = null;
