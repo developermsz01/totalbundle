@@ -4,17 +4,21 @@ import {
   AppDistribution,
   shopifyApp,
 } from "@shopify/shopify-app-remix/server";
-import { PrismaSessionStorage } from "@shopify/shopify-app-session-storage-prisma";
-import prisma from "./db.server";
+import { createResilientSessionStorage } from "./session-storage.server";
+import { prisma } from "./db.server";
 
-const appUrl =
+const rawAppUrl =
   process.env.SHOPIFY_APP_URL
-    ? (process.env.SHOPIFY_APP_URL.startsWith("http") ? process.env.SHOPIFY_APP_URL : `https://${process.env.SHOPIFY_APP_URL}`)
+    ? (process.env.SHOPIFY_APP_URL.startsWith("http")
+        ? process.env.SHOPIFY_APP_URL
+        : `https://${process.env.SHOPIFY_APP_URL}`)
     : process.env.VERCEL_PROJECT_PRODUCTION_URL
       ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
       : process.env.VERCEL_URL
         ? `https://${process.env.VERCEL_URL}`
         : "";
+
+const appUrl = rawAppUrl ? rawAppUrl.replace(/\/+$/, "") : "";
 
 const shopify = shopifyApp({
   apiKey: process.env.SHOPIFY_API_KEY,
@@ -25,7 +29,7 @@ const shopify = shopifyApp({
     : ["write_products", "read_products", "write_discounts", "read_discounts"],
   appUrl,
   authPathPrefix: "/auth",
-  sessionStorage: new PrismaSessionStorage(prisma) as any,
+  sessionStorage: createResilientSessionStorage(prisma as any) as any,
   distribution: AppDistribution.AppStore,
   future: {
     unstable_newEmbeddedAuthStrategy: true,
