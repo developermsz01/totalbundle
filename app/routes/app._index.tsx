@@ -141,10 +141,10 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 };
 
 const STEPS = [
-  { id: 1, title: "Placement & Triggers", shortTitle: "1. Placement", subtitle: "Position & display conditions" },
-  { id: 2, title: "Product & Cart Elements", shortTitle: "2. Elements", subtitle: "Thumbnail, badge & quantity" },
-  { id: 3, title: "Button Text & Action", shortTitle: "3. Button & Flow", subtitle: "CTA text & post-add flow" },
-  { id: 4, title: "Colors & Styling", shortTitle: "4. Design", subtitle: "Branding, colors & corner radius" },
+  { id: 1, title: "Placement & Triggers", shortTitle: "Placement", subtitle: "Position & display conditions" },
+  { id: 2, title: "Product & Cart Elements", shortTitle: "Elements", subtitle: "Thumbnail, badge & quantity" },
+  { id: 3, title: "Button Text & Action", shortTitle: "Button & Flow", subtitle: "CTA text & post-add flow" },
+  { id: 4, title: "Colors & Styling", shortTitle: "Design", subtitle: "Branding, colors & corner radius" },
 ];
 
 export default function StickyCartDashboard() {
@@ -342,7 +342,7 @@ export default function StickyCartDashboard() {
                   <BlockStack gap="400">
                     <InlineStack align="space-between">
                       <Text as="h3" variant="headingMd">
-                        1. Placement & Visibility Settings
+                        Placement & Visibility Settings
                       </Text>
                       <Badge tone="info">Step 1</Badge>
                     </InlineStack>
@@ -414,7 +414,7 @@ export default function StickyCartDashboard() {
                   <BlockStack gap="400">
                     <InlineStack align="space-between">
                       <Text as="h3" variant="headingMd">
-                        2. Product & Cart Elements
+                        Product & Cart Elements
                       </Text>
                       <Badge tone="info">Step 2</Badge>
                     </InlineStack>
@@ -470,7 +470,7 @@ export default function StickyCartDashboard() {
                   <BlockStack gap="400">
                     <InlineStack align="space-between">
                       <Text as="h3" variant="headingMd">
-                        3. Button Text & Post-Add Action
+                        Button Text & Post-Add Action
                       </Text>
                       <Badge tone="info">Step 3</Badge>
                     </InlineStack>
@@ -543,7 +543,7 @@ export default function StickyCartDashboard() {
                   <BlockStack gap="400">
                     <InlineStack align="space-between">
                       <Text as="h3" variant="headingMd">
-                        4. Colors & Style
+                        Colors & Style
                       </Text>
                       <Badge tone="info">Step 4</Badge>
                     </InlineStack>
