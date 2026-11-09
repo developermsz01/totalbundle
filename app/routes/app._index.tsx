@@ -20,11 +20,11 @@ import {
   Checkbox,
   RangeSlider,
   ButtonGroup,
+  ProgressBar,
 } from "@shopify/polaris";
 import {
   ExternalIcon,
   CheckIcon,
-  ViewIcon,
 } from "@shopify/polaris-icons";
 import { TitleBar, useAppBridge } from "@shopify/app-bridge-react";
 import { authenticate } from "../shopify.server";
@@ -140,6 +140,13 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   return json({ success: false, error: "No settings provided" }, { status: 400 });
 };
 
+const STEPS = [
+  { id: 1, title: "Placement & Triggers", shortTitle: "1. Placement", subtitle: "Position & display conditions" },
+  { id: 2, title: "Product & Cart Elements", shortTitle: "2. Elements", subtitle: "Thumbnail, badge & quantity" },
+  { id: 3, title: "Button Text & Action", shortTitle: "3. Button & Flow", subtitle: "CTA text & post-add flow" },
+  { id: 4, title: "Colors & Styling", shortTitle: "4. Design", subtitle: "Branding, colors & corner radius" },
+];
+
 export default function StickyCartDashboard() {
   const { shop, settings: initialSettings, themeEditorUrl } = useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
@@ -149,12 +156,14 @@ export default function StickyCartDashboard() {
 
   const isSaving = navigation.state === "submitting";
 
+  // Stepper state
+  const [currentStep, setCurrentStep] = useState<number>(1);
+
   // Form State
   const [settings, setSettings] = useState<StickyCartSettings>(initialSettings);
   const [previewDevice, setPreviewDevice] = useState<"mobile" | "desktop">("desktop");
   const [previewAdded, setPreviewAdded] = useState(false);
   const [previewQty, setPreviewQty] = useState(1);
-  const [previewVariant, setPreviewVariant] = useState("Standard / Black");
 
   useEffect(() => {
     if (actionData?.success) {
@@ -231,7 +240,7 @@ export default function StickyCartDashboard() {
           <InlineStack align="space-between" blockAlign="center">
             <Text as="p" variant="bodyMd">
               {settings.enabled
-                ? "Your Sticky Add to Cart bar is active on product pages. All customizations below apply directly without needing theme editor changes."
+                ? "Your Sticky Add to Cart bar is active on product pages. Configure each step below to tailor the design and behavior."
                 : "The sticky bar is currently turned off and won't appear on product pages."}
             </Text>
             <Button
@@ -246,324 +255,479 @@ export default function StickyCartDashboard() {
         </Banner>
 
         <Layout>
-          {/* LEFT COLUMN: Controls & Settings */}
+          {/* LEFT COLUMN: Multi-Step Controls */}
           <Layout.Section>
             <BlockStack gap="400">
-              {/* 1. Placement & Visibility */}
+              {/* Stepper Header Card */}
               <Card>
-                <BlockStack gap="400">
-                  <InlineStack align="space-between">
-                    <Text as="h2" variant="headingMd">
-                      1. Placement & Triggers
-                    </Text>
-                    <Badge tone="info">Storefront</Badge>
-                  </InlineStack>
-                  <Divider />
-
-                  <Checkbox
-                    label="Enable Sticky Add to Cart Bar"
-                    helpText="Master switch for the sticky buy bar across all product pages."
-                    checked={settings.enabled}
-                    onChange={(val) => setSettings({ ...settings, enabled: val })}
-                  />
-
-                  <Select
-                    label="Bar Position"
-                    options={[
-                      { label: "Bottom of screen (Recommended for Mobile & Desktop)", value: "bottom" },
-                      { label: "Top of screen", value: "top" },
-                    ]}
-                    value={settings.position}
-                    onChange={(val) => setSettings({ ...settings, position: val as "bottom" | "top" })}
-                  />
-
-                  <Select
-                    label="When to Display"
-                    options={[
-                      { label: "Show after scrolling past product form", value: "scroll" },
-                      { label: "Always visible on page load", value: "always" },
-                    ]}
-                    value={settings.desktopVisibility}
-                    onChange={(val) =>
-                      setSettings({ ...settings, desktopVisibility: val as "scroll" | "always" })
-                    }
-                  />
-
-                  <InlineStack gap="600">
-                    <Checkbox
-                      label="Show on Mobile devices"
-                      checked={settings.showOnMobile}
-                      onChange={(val) => setSettings({ ...settings, showOnMobile: val })}
-                    />
-                    <Checkbox
-                      label="Show on Desktop screens"
-                      checked={settings.showOnDesktop}
-                      onChange={(val) => setSettings({ ...settings, showOnDesktop: val })}
-                    />
-                  </InlineStack>
-                </BlockStack>
-              </Card>
-
-              {/* 2. Display Elements */}
-              <Card>
-                <BlockStack gap="400">
-                  <Text as="h2" variant="headingMd">
-                    2. Product & Cart Elements
-                  </Text>
-                  <Divider />
-
-                  <Checkbox
-                    label="Show Product Thumbnail"
-                    helpText="Shows the current product or selected variant image inside the bar."
-                    checked={settings.showThumbnail}
-                    onChange={(val) => setSettings({ ...settings, showThumbnail: val })}
-                  />
-
-                  <Checkbox
-                    label="Show Compare-at Price & Discount Badge"
-                    helpText="Highlights regular price and savings badge (e.g., Save 20%) when items are discounted."
-                    checked={settings.showCompareAtPrice}
-                    onChange={(val) => setSettings({ ...settings, showCompareAtPrice: val })}
-                  />
-
-                  <Checkbox
-                    label="Show Quantity Selector (- 1 +)"
-                    helpText="Enables customers to adjust units directly within the sticky bar."
-                    checked={settings.showQuantity}
-                    onChange={(val) => setSettings({ ...settings, showQuantity: val })}
-                  />
-                </BlockStack>
-              </Card>
-
-              {/* 3. Button Text & Checkout Flow */}
-              <Card>
-                <BlockStack gap="400">
-                  <Text as="h2" variant="headingMd">
-                    3. Button Text & Post-Add Action
-                  </Text>
-                  <Divider />
-
-                  <InlineStack gap="400">
-                    <Box minWidth="45%">
-                      <TextField
-                        label="Button Text (In Stock)"
-                        value={settings.buttonText}
-                        onChange={(val) => setSettings({ ...settings, buttonText: val })}
-                        autoComplete="off"
-                      />
-                    </Box>
-                    <Box minWidth="45%">
-                      <TextField
-                        label="Button Text (Sold Out)"
-                        value={settings.soldOutText}
-                        onChange={(val) => setSettings({ ...settings, soldOutText: val })}
-                        autoComplete="off"
-                      />
-                    </Box>
-                  </InlineStack>
-
-                  <Select
-                    label="Action After Adding to Cart"
-                    options={[
-                      {
-                        label: "Stay on page & show 'Added to Cart' confirmation (Recommended)",
-                        value: "stay",
-                      },
-                      { label: "Redirect customer to Cart page (/cart)", value: "cart" },
-                      { label: "Redirect customer directly to Checkout (/checkout)", value: "checkout" },
-                    ]}
-                    value={settings.afterAddAction}
-                    onChange={(val) =>
-                      setSettings({
-                        ...settings,
-                        afterAddAction: val as "stay" | "cart" | "checkout",
-                      })
-                    }
-                  />
-                </BlockStack>
-              </Card>
-
-              {/* 4. Colors & Theme Styling */}
-              <Card>
-                <BlockStack gap="400">
-                  <InlineStack align="space-between">
-                    <Text as="h2" variant="headingMd">
-                      4. Colors & Style
-                    </Text>
+                <BlockStack gap="300">
+                  <InlineStack align="space-between" blockAlign="center">
+                    <InlineStack gap="200" blockAlign="center">
+                      <Badge tone="info">{`Step ${currentStep} of 4`}</Badge>
+                      <Text as="h2" variant="headingMd">
+                        {STEPS[currentStep - 1].title}
+                      </Text>
+                    </InlineStack>
                     <Text as="span" variant="bodySm" tone="subdued">
-                      Live Preview on Right
+                      {STEPS[currentStep - 1].subtitle}
                     </Text>
                   </InlineStack>
-                  <Divider />
 
-                  {/* 1-Click Color Presets */}
-                  <BlockStack gap="100">
-                    <Text as="p" variant="bodySm" fontWeight="semibold">
-                      Quick Color Themes:
-                    </Text>
-                    <InlineStack gap="200">
-                      <Button
-                        size="slim"
-                        onClick={() =>
-                          applyColorPreset({
-                            bg: "#ffffff",
-                            text: "#121212",
-                            btnBg: "#121212",
-                            btnText: "#ffffff",
-                            btnHover: "#2e2e2e",
-                            radius: 8,
-                          })
-                        }
-                      >
-                        Modern Dark
+                  {/* Step Progress Bar */}
+                  <ProgressBar progress={currentStep * 25} tone="primary" size="small" />
+
+                  {/* Step Navigation Pills */}
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "8px" }}>
+                    {STEPS.map((s) => {
+                      const isActive = s.id === currentStep;
+                      const isCompleted = s.id < currentStep;
+
+                      return (
+                        <button
+                          key={s.id}
+                          type="button"
+                          onClick={() => setCurrentStep(s.id)}
+                          style={{
+                            padding: "8px 6px",
+                            borderRadius: "8px",
+                            border: isActive ? "2px solid #008060" : "1px solid #e1e3e5",
+                            backgroundColor: isActive ? "#f0fdf4" : isCompleted ? "#f9fafb" : "#ffffff",
+                            cursor: "pointer",
+                            textAlign: "center",
+                            transition: "all 0.15s ease",
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: "center",
+                            gap: "2px",
+                          }}
+                        >
+                          <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                            <span
+                              style={{
+                                width: "18px",
+                                height: "18px",
+                                borderRadius: "50%",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                fontSize: "11px",
+                                fontWeight: "bold",
+                                backgroundColor: isActive ? "#008060" : isCompleted ? "#10b981" : "#e5e7eb",
+                                color: isActive || isCompleted ? "#ffffff" : "#4b5563",
+                              }}
+                            >
+                              {isCompleted ? "✓" : s.id}
+                            </span>
+                            <span
+                              style={{
+                                fontSize: "12px",
+                                fontWeight: isActive ? "700" : "500",
+                                color: isActive ? "#008060" : "#374151",
+                                whiteSpace: "nowrap",
+                              }}
+                            >
+                              {s.shortTitle}
+                            </span>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </BlockStack>
+              </Card>
+
+              {/* STEP 1: Placement & Triggers */}
+              {currentStep === 1 && (
+                <Card>
+                  <BlockStack gap="400">
+                    <InlineStack align="space-between">
+                      <Text as="h3" variant="headingMd">
+                        1. Placement & Visibility Settings
+                      </Text>
+                      <Badge tone="info">Step 1</Badge>
+                    </InlineStack>
+                    <Divider />
+
+                    <Checkbox
+                      label="Enable Sticky Add to Cart Bar"
+                      helpText="Master switch for the sticky buy bar across all product pages."
+                      checked={settings.enabled}
+                      onChange={(val) => setSettings({ ...settings, enabled: val })}
+                    />
+
+                    <Select
+                      label="Bar Position"
+                      options={[
+                        { label: "Bottom of screen (Recommended for Mobile & Desktop)", value: "bottom" },
+                        { label: "Top of screen", value: "top" },
+                      ]}
+                      value={settings.position}
+                      onChange={(val) => setSettings({ ...settings, position: val as "bottom" | "top" })}
+                    />
+
+                    <Select
+                      label="When to Display"
+                      options={[
+                        { label: "Show after scrolling past product form", value: "scroll" },
+                        { label: "Always visible on page load", value: "always" },
+                      ]}
+                      value={settings.desktopVisibility}
+                      onChange={(val) =>
+                        setSettings({ ...settings, desktopVisibility: val as "scroll" | "always" })
+                      }
+                    />
+
+                    <InlineStack gap="600">
+                      <Checkbox
+                        label="Show on Mobile devices"
+                        checked={settings.showOnMobile}
+                        onChange={(val) => setSettings({ ...settings, showOnMobile: val })}
+                      />
+                      <Checkbox
+                        label="Show on Desktop screens"
+                        checked={settings.showOnDesktop}
+                        onChange={(val) => setSettings({ ...settings, showOnDesktop: val })}
+                      />
+                    </InlineStack>
+
+                    <Divider />
+
+                    {/* Step 1 Footer */}
+                    <InlineStack align="space-between" blockAlign="center">
+                      <Button size="slim" onClick={handleSave} loading={isSaving}>
+                        Save Draft
                       </Button>
                       <Button
-                        size="slim"
-                        onClick={() =>
-                          applyColorPreset({
-                            bg: "#ffffff",
-                            text: "#111827",
-                            btnBg: "#2563eb",
-                            btnText: "#ffffff",
-                            btnHover: "#1d4ed8",
-                            radius: 10,
-                          })
-                        }
+                        variant="primary"
+                        onClick={() => setCurrentStep(2)}
                       >
-                        Royal Blue
-                      </Button>
-                      <Button
-                        size="slim"
-                        onClick={() =>
-                          applyColorPreset({
-                            bg: "#ffffff",
-                            text: "#1e293b",
-                            btnBg: "#059669",
-                            btnText: "#ffffff",
-                            btnHover: "#047857",
-                            radius: 12,
-                          })
-                        }
-                      >
-                        Emerald Green
-                      </Button>
-                      <Button
-                        size="slim"
-                        onClick={() =>
-                          applyColorPreset({
-                            bg: "#18181b",
-                            text: "#fafafa",
-                            btnBg: "#fafafa",
-                            btnText: "#18181b",
-                            btnHover: "#e4e4e7",
-                            radius: 24,
-                          })
-                        }
-                      >
-                        Minimalist Dark
+                        Next: Elements & Display →
                       </Button>
                     </InlineStack>
                   </BlockStack>
+                </Card>
+              )}
 
-                  <InlineStack gap="400">
-                    <Box minWidth="45%">
-                      <TextField
-                        label="Bar Background"
-                        value={settings.bgColor}
-                        onChange={(val) => setSettings({ ...settings, bgColor: val })}
-                        autoComplete="off"
-                        prefix={
-                          <div
-                            style={{
-                              width: 18,
-                              height: 18,
-                              borderRadius: 4,
-                              backgroundColor: settings.bgColor,
-                              border: "1px solid #ccc",
-                            }}
-                          />
-                        }
-                      />
-                    </Box>
-                    <Box minWidth="45%">
-                      <TextField
-                        label="Text Color"
-                        value={settings.textColor}
-                        onChange={(val) => setSettings({ ...settings, textColor: val })}
-                        autoComplete="off"
-                        prefix={
-                          <div
-                            style={{
-                              width: 18,
-                              height: 18,
-                              borderRadius: 4,
-                              backgroundColor: settings.textColor,
-                              border: "1px solid #ccc",
-                            }}
-                          />
-                        }
-                      />
-                    </Box>
-                  </InlineStack>
+              {/* STEP 2: Display Elements */}
+              {currentStep === 2 && (
+                <Card>
+                  <BlockStack gap="400">
+                    <InlineStack align="space-between">
+                      <Text as="h3" variant="headingMd">
+                        2. Product & Cart Elements
+                      </Text>
+                      <Badge tone="info">Step 2</Badge>
+                    </InlineStack>
+                    <Divider />
 
-                  <InlineStack gap="400">
-                    <Box minWidth="45%">
-                      <TextField
-                        label="Button Background"
-                        value={settings.buttonBgColor}
-                        onChange={(val) => setSettings({ ...settings, buttonBgColor: val })}
-                        autoComplete="off"
-                        prefix={
-                          <div
-                            style={{
-                              width: 18,
-                              height: 18,
-                              borderRadius: 4,
-                              backgroundColor: settings.buttonBgColor,
-                              border: "1px solid #ccc",
-                            }}
-                          />
-                        }
-                      />
-                    </Box>
-                    <Box minWidth="45%">
-                      <TextField
-                        label="Button Text Color"
-                        value={settings.buttonTextColor}
-                        onChange={(val) => setSettings({ ...settings, buttonTextColor: val })}
-                        autoComplete="off"
-                        prefix={
-                          <div
-                            style={{
-                              width: 18,
-                              height: 18,
-                              borderRadius: 4,
-                              backgroundColor: settings.buttonTextColor,
-                              border: "1px solid #ccc",
-                            }}
-                          />
-                        }
-                      />
-                    </Box>
-                  </InlineStack>
+                    <Checkbox
+                      label="Show Product Thumbnail"
+                      helpText="Shows the current product or selected variant image inside the bar."
+                      checked={settings.showThumbnail}
+                      onChange={(val) => setSettings({ ...settings, showThumbnail: val })}
+                    />
 
-                  <RangeSlider
-                    label={`Button Corner Radius: ${settings.borderRadius}px`}
-                    value={settings.borderRadius}
-                    min={0}
-                    max={28}
-                    step={2}
-                    onChange={(val) => setSettings({ ...settings, borderRadius: Number(val) })}
-                  />
-                </BlockStack>
-              </Card>
+                    <Checkbox
+                      label="Show Compare-at Price & Discount Badge"
+                      helpText="Highlights regular price and savings badge (e.g., Save 20%) when items are discounted."
+                      checked={settings.showCompareAtPrice}
+                      onChange={(val) => setSettings({ ...settings, showCompareAtPrice: val })}
+                    />
 
-              {/* Bottom Sticky Save Button */}
-              <Box paddingBlockStart="200">
-                <Button variant="primary" size="large" onClick={handleSave} loading={isSaving}>
-                  {isSaving ? "Saving Settings..." : "Save Settings to Storefront"}
-                </Button>
-              </Box>
+                    <Checkbox
+                      label="Show Quantity Selector (- 1 +)"
+                      helpText="Enables customers to adjust units directly within the sticky bar."
+                      checked={settings.showQuantity}
+                      onChange={(val) => setSettings({ ...settings, showQuantity: val })}
+                    />
+
+                    <Divider />
+
+                    {/* Step 2 Footer */}
+                    <InlineStack align="space-between" blockAlign="center">
+                      <Button onClick={() => setCurrentStep(1)}>
+                        ← Back to Placement
+                      </Button>
+                      <InlineStack gap="200">
+                        <Button size="slim" onClick={handleSave} loading={isSaving}>
+                          Save Draft
+                        </Button>
+                        <Button
+                          variant="primary"
+                          onClick={() => setCurrentStep(3)}
+                        >
+                          Next: Button & Flow →
+                        </Button>
+                      </InlineStack>
+                    </InlineStack>
+                  </BlockStack>
+                </Card>
+              )}
+
+              {/* STEP 3: Button Text & Checkout Flow */}
+              {currentStep === 3 && (
+                <Card>
+                  <BlockStack gap="400">
+                    <InlineStack align="space-between">
+                      <Text as="h3" variant="headingMd">
+                        3. Button Text & Post-Add Action
+                      </Text>
+                      <Badge tone="info">Step 3</Badge>
+                    </InlineStack>
+                    <Divider />
+
+                    <InlineStack gap="400">
+                      <Box minWidth="45%">
+                        <TextField
+                          label="Button Text (In Stock)"
+                          value={settings.buttonText}
+                          onChange={(val) => setSettings({ ...settings, buttonText: val })}
+                          autoComplete="off"
+                        />
+                      </Box>
+                      <Box minWidth="45%">
+                        <TextField
+                          label="Button Text (Sold Out)"
+                          value={settings.soldOutText}
+                          onChange={(val) => setSettings({ ...settings, soldOutText: val })}
+                          autoComplete="off"
+                        />
+                      </Box>
+                    </InlineStack>
+
+                    <Select
+                      label="Action After Adding to Cart"
+                      options={[
+                        {
+                          label: "Stay on page & show 'Added to Cart' confirmation (Recommended)",
+                          value: "stay",
+                        },
+                        { label: "Redirect customer to Cart page (/cart)", value: "cart" },
+                        { label: "Redirect customer directly to Checkout (/checkout)", value: "checkout" },
+                      ]}
+                      value={settings.afterAddAction}
+                      onChange={(val) =>
+                        setSettings({
+                          ...settings,
+                          afterAddAction: val as "stay" | "cart" | "checkout",
+                        })
+                      }
+                    />
+
+                    <Divider />
+
+                    {/* Step 3 Footer */}
+                    <InlineStack align="space-between" blockAlign="center">
+                      <Button onClick={() => setCurrentStep(2)}>
+                        ← Back to Elements
+                      </Button>
+                      <InlineStack gap="200">
+                        <Button size="slim" onClick={handleSave} loading={isSaving}>
+                          Save Draft
+                        </Button>
+                        <Button
+                          variant="primary"
+                          onClick={() => setCurrentStep(4)}
+                        >
+                          Next: Colors & Styling →
+                        </Button>
+                      </InlineStack>
+                    </InlineStack>
+                  </BlockStack>
+                </Card>
+              )}
+
+              {/* STEP 4: Colors & Theme Styling */}
+              {currentStep === 4 && (
+                <Card>
+                  <BlockStack gap="400">
+                    <InlineStack align="space-between">
+                      <Text as="h3" variant="headingMd">
+                        4. Colors & Style
+                      </Text>
+                      <Badge tone="info">Step 4</Badge>
+                    </InlineStack>
+                    <Divider />
+
+                    {/* 1-Click Color Presets */}
+                    <BlockStack gap="100">
+                      <Text as="p" variant="bodySm" fontWeight="semibold">
+                        Quick Color Themes:
+                      </Text>
+                      <InlineStack gap="200">
+                        <Button
+                          size="slim"
+                          onClick={() =>
+                            applyColorPreset({
+                              bg: "#ffffff",
+                              text: "#121212",
+                              btnBg: "#121212",
+                              btnText: "#ffffff",
+                              btnHover: "#2e2e2e",
+                              radius: 8,
+                            })
+                          }
+                        >
+                          Modern Dark
+                        </Button>
+                        <Button
+                          size="slim"
+                          onClick={() =>
+                            applyColorPreset({
+                              bg: "#ffffff",
+                              text: "#111827",
+                              btnBg: "#2563eb",
+                              btnText: "#ffffff",
+                              btnHover: "#1d4ed8",
+                              radius: 10,
+                            })
+                          }
+                        >
+                          Royal Blue
+                        </Button>
+                        <Button
+                          size="slim"
+                          onClick={() =>
+                            applyColorPreset({
+                              bg: "#ffffff",
+                              text: "#1e293b",
+                              btnBg: "#059669",
+                              btnText: "#ffffff",
+                              btnHover: "#047857",
+                              radius: 12,
+                            })
+                          }
+                        >
+                          Emerald Green
+                        </Button>
+                        <Button
+                          size="slim"
+                          onClick={() =>
+                            applyColorPreset({
+                              bg: "#18181b",
+                              text: "#fafafa",
+                              btnBg: "#fafafa",
+                              btnText: "#18181b",
+                              btnHover: "#e4e4e7",
+                              radius: 24,
+                            })
+                          }
+                        >
+                          Minimalist Dark
+                        </Button>
+                      </InlineStack>
+                    </BlockStack>
+
+                    <InlineStack gap="400">
+                      <Box minWidth="45%">
+                        <TextField
+                          label="Bar Background"
+                          value={settings.bgColor}
+                          onChange={(val) => setSettings({ ...settings, bgColor: val })}
+                          autoComplete="off"
+                          prefix={
+                            <div
+                              style={{
+                                width: 18,
+                                height: 18,
+                                borderRadius: 4,
+                                backgroundColor: settings.bgColor,
+                                border: "1px solid #ccc",
+                              }}
+                            />
+                          }
+                        />
+                      </Box>
+                      <Box minWidth="45%">
+                        <TextField
+                          label="Text Color"
+                          value={settings.textColor}
+                          onChange={(val) => setSettings({ ...settings, textColor: val })}
+                          autoComplete="off"
+                          prefix={
+                            <div
+                              style={{
+                                width: 18,
+                                height: 18,
+                                borderRadius: 4,
+                                backgroundColor: settings.textColor,
+                                border: "1px solid #ccc",
+                              }}
+                            />
+                          }
+                        />
+                      </Box>
+                    </InlineStack>
+
+                    <InlineStack gap="400">
+                      <Box minWidth="45%">
+                        <TextField
+                          label="Button Background"
+                          value={settings.buttonBgColor}
+                          onChange={(val) => setSettings({ ...settings, buttonBgColor: val })}
+                          autoComplete="off"
+                          prefix={
+                            <div
+                              style={{
+                                width: 18,
+                                height: 18,
+                                borderRadius: 4,
+                                backgroundColor: settings.buttonBgColor,
+                                border: "1px solid #ccc",
+                              }}
+                            />
+                          }
+                        />
+                      </Box>
+                      <Box minWidth="45%">
+                        <TextField
+                          label="Button Text Color"
+                          value={settings.buttonTextColor}
+                          onChange={(val) => setSettings({ ...settings, buttonTextColor: val })}
+                          autoComplete="off"
+                          prefix={
+                            <div
+                              style={{
+                                width: 18,
+                                height: 18,
+                                borderRadius: 4,
+                                backgroundColor: settings.buttonTextColor,
+                                border: "1px solid #ccc",
+                              }}
+                            />
+                          }
+                        />
+                      </Box>
+                    </InlineStack>
+
+                    <RangeSlider
+                      label={`Button Corner Radius: ${settings.borderRadius}px`}
+                      value={settings.borderRadius}
+                      min={0}
+                      max={28}
+                      step={2}
+                      onChange={(val) => setSettings({ ...settings, borderRadius: Number(val) })}
+                    />
+
+                    <Divider />
+
+                    {/* Step 4 Footer */}
+                    <InlineStack align="space-between" blockAlign="center">
+                      <Button onClick={() => setCurrentStep(3)}>
+                        ← Back to Button & Flow
+                      </Button>
+                      <Button
+                        variant="primary"
+                        size="large"
+                        onClick={handleSave}
+                        loading={isSaving}
+                      >
+                        {isSaving ? "Saving..." : "Save Settings to Storefront ✓"}
+                      </Button>
+                    </InlineStack>
+                  </BlockStack>
+                </Card>
+              )}
             </BlockStack>
           </Layout.Section>
 
