@@ -11,6 +11,15 @@
 (function () {
   'use strict';
 
+  // Global singleton guard to prevent double-execution when script is loaded multiple times
+  if (window.__totalBundleCartDrawerLoaded) {
+    return;
+  }
+  window.__totalBundleCartDrawerLoaded = true;
+
+  // Global flag to prevent internal cart operations from triggering interceptors
+  window.__tbCartOpActive = false;
+
   function formatMoney(cents) {
     if (typeof cents !== 'number') cents = parseInt(cents, 10) || 0;
     var dollars = (cents / 100).toFixed(2);
@@ -44,6 +53,8 @@
     this.threshold = parseFloat(this.drawer.dataset.freeShippingThreshold) || 50;
     this.shippingText = this.drawer.dataset.freeShippingText || 'Add {amount} more for FREE Shipping!';
     this.shippingSuccessText = this.drawer.dataset.freeShippingSuccessText || '🎉 You have unlocked Free Shipping!';
+    this.barColor = this.drawer.dataset.freeShippingBarColor || '#008060';
+    this.barBgColor = this.drawer.dataset.freeShippingBarBgColor || '#e4e5e7';
 
     this.itemsContainer = this.drawer.querySelector('.tb-cart-items-wrap');
     this.emptyContainer = this.drawer.querySelector('.tb-drawer-empty');
@@ -228,7 +239,7 @@
         var urlStr = typeof resource === 'string' ? resource : (resource && resource.url ? resource.url : '');
         // Match /cart/add or /cart/add.js ONLY (not /cart/change, /cart/update, /cart.js)
         var isCartAddUrl = urlStr && /\/cart\/add(\.js)?(\?|$|\/|#)/.test(urlStr);
-        var isExternalCartAdd = isCartAddUrl && !self._tbInternalCartOp && !self._tbAddonAdding;
+        var isExternalCartAdd = isCartAddUrl && !window.__tbCartOpActive && !self._tbInternalCartOp && !self._tbAddonAdding;
 
         return origFetch.apply(this, arguments).then(function (response) {
           if (isExternalCartAdd && response.ok) {
@@ -255,7 +266,7 @@
       XMLHttpRequest.prototype.send = function () {
         var xhr = this;
         var isCartAddUrl = xhr._tbUrl && /\/cart\/add(\.js)?(\?|$|\/|#)/.test(xhr._tbUrl);
-        if (isCartAddUrl && !self._tbInternalCartOp && !self._tbAddonAdding) {
+        if (isCartAddUrl && !window.__tbCartOpActive && !self._tbInternalCartOp && !self._tbAddonAdding) {
           xhr.addEventListener('load', function () {
             if (xhr.status >= 200 && xhr.status < 300) {
               setTimeout(function () {
@@ -274,8 +285,10 @@
       try {
         window.jQuery(document).ajaxComplete(function (event, xhr, settings) {
           if (settings && settings.url && (settings.url.indexOf('/cart/add') !== -1 || settings.url.indexOf('/cart/add.js') !== -1)) {
-            self.suppressThemeDrawer();
-            self.openAndRefresh();
+            if (!window.__tbCartOpActive && !self._tbInternalCartOp && !self._tbAddonAdding) {
+              self.suppressThemeDrawer();
+              self.openAndRefresh();
+            }
           }
         });
       } catch (jqErr) {}
@@ -450,20 +463,23 @@
 
   TotalBundleCartDrawer.prototype.refresh = function () {
     var self = this;
-    // Build cart URL — use Shopify.routes.root for multi-currency compatibility
     var cartUrl = (window.Shopify && window.Shopify.routes && window.Shopify.routes.root
       ? window.Shopify.routes.root + 'cart.js'
       : '/cart.js') + '?_tb=' + Date.now();
 
-    // Mark as internal so the fetch monkey-patch won't re-trigger openAndRefresh
+    window.__tbCartOpActive = true;
     self._tbInternalCartOp = true;
     fetch(cartUrl, { headers: { 'Accept': 'application/json' } })
-      .then(function (res) { return res.json(); })
-      .then(function (cart) {
+      .then(function (res) {
+        window.__tbCartOpActive = false;
         self._tbInternalCartOp = false;
+        return res.json();
+      })
+      .then(function (cart) {
         self.renderCart(cart);
       })
       .catch(function (err) {
+        window.__tbCartOpActive = false;
         self._tbInternalCartOp = false;
         console.warn('[TotalBundle] Failed to fetch cart:', err);
       });
@@ -471,15 +487,19 @@
 
   TotalBundleCartDrawer.prototype.updateItem = function (itemKey, quantity) {
     var self = this;
-    // IMPORTANT: use 'id' with the cart line KEY (e.g. "40234567890:abc123")
-    // NOT 'line' (1-based index which shifts on removal)
-    // NOT variant id alone (which removes ALL lines with that variant)
     if (!itemKey) {
       console.error('[TotalBundle] updateItem called with empty key');
       return;
     }
+
+    var changeUrl = window.Shopify && window.Shopify.routes && window.Shopify.routes.root
+      ? window.Shopify.routes.root + 'cart/change.js'
+      : '/cart/change.js';
+
+    window.__tbCartOpActive = true;
     self._tbInternalCartOp = true;
-    fetch('/cart/change.js', {
+
+    fetch(changeUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -490,20 +510,32 @@
         quantity: parseInt(quantity, 10),
       }),
     })
-      .then(function (res) { return res.json(); })
-      .then(function (cart) {
+      .then(function (res) {
+        window.__tbCartOpActive = false;
         self._tbInternalCartOp = false;
-        self.renderCart(cart);
+        if (!res.ok) {
+          throw new Error('Cart change failed with status ' + res.status);
+        }
+        return res.json();
+      })
+      .then(function (cart) {
+        if (cart && Array.isArray(cart.items)) {
+          self.renderCart(cart);
+        } else {
+          self.refresh();
+        }
       })
       .catch(function (err) {
+        window.__tbCartOpActive = false;
         self._tbInternalCartOp = false;
         console.error('[TotalBundle] Failed to update item:', err);
+        // Safely re-sync cart from Shopify rather than blanking out
+        self.refresh();
       });
   };
 
   TotalBundleCartDrawer.prototype.handleAddon = function (button, variantId, customTitle, customPrice) {
     var self = this;
-    // Prevent double-click / double-add
     if (button.classList.contains('tb-loading')) return;
 
     button.classList.add('tb-loading');
@@ -532,7 +564,7 @@
       ? window.Shopify.routes.root + 'cart/add.js'
       : '/cart/add.js';
 
-    // Set flag so fetch monkey-patch skips this internal add request
+    window.__tbCartOpActive = true;
     self._tbAddonAdding = true;
     self._tbInternalCartOp = true;
 
@@ -545,6 +577,7 @@
       body: JSON.stringify(payload),
     })
       .then(function (res) {
+        window.__tbCartOpActive = false;
         self._tbAddonAdding = false;
         self._tbInternalCartOp = false;
         if (!res.ok) {
@@ -558,10 +591,10 @@
         setTimeout(function () {
           button.textContent = originalText;
         }, 1500);
-        // Refresh cart display once — no second trigger from monkey-patch
         self.refresh();
       })
       .catch(function (err) {
+        window.__tbCartOpActive = false;
         self._tbAddonAdding = false;
         self._tbInternalCartOp = false;
         button.classList.remove('tb-loading');
@@ -673,6 +706,15 @@
 
     var priceCents = typeof totalPriceCents === 'number' ? totalPriceCents : parseInt(totalPriceCents, 10) || 0;
     var percentage = Math.min(100, Math.max(0, Math.round((priceCents / thresholdCents) * 100)));
+
+    // Ensure colors are directly applied to the DOM elements
+    var barColor = this.barColor || this.drawer.dataset.freeShippingBarColor || '#008060';
+    var trackColor = this.barBgColor || this.drawer.dataset.freeShippingBarBgColor || '#e4e5e7';
+    this.shippingFillEl.style.backgroundColor = barColor;
+    var trackEl = this.shippingSection.querySelector('.tb-free-shipping-track');
+    if (trackEl) {
+      trackEl.style.backgroundColor = trackColor;
+    }
 
     // Animate fill bar width from 0% up to 100% complete
     this.shippingFillEl.style.width = percentage + '%';

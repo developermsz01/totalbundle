@@ -1101,14 +1101,39 @@ export function TotalBundleDashboard({ forcedFeature }: { forcedFeature?: "stick
                             />
                           </Box>
                           <Box width="48%">
-                            <TextField
-                              label="Progress Bar Fill Color"
-                              value={drawerSettings.freeShippingBarColor}
-                              onChange={(val) =>
-                                setDrawerSettings({ ...drawerSettings, freeShippingBarColor: val })
-                              }
-                              autoComplete="off"
-                            />
+                            <BlockStack gap="100">
+                              <Text as="span" variant="bodySm">Progress Bar Fill Color</Text>
+                              <InlineStack gap="200" blockAlign="center">
+                                <input
+                                  type="color"
+                                  value={drawerSettings.freeShippingBarColor || "#008060"}
+                                  onChange={(e) =>
+                                    setDrawerSettings({ ...drawerSettings, freeShippingBarColor: e.target.value })
+                                  }
+                                  style={{
+                                    width: "40px",
+                                    height: "36px",
+                                    padding: "2px",
+                                    border: "1px solid #d1d5db",
+                                    borderRadius: "6px",
+                                    cursor: "pointer",
+                                    backgroundColor: "#fff",
+                                  }}
+                                  aria-label="Pick progress bar fill color"
+                                />
+                                <div style={{ flex: 1 }}>
+                                  <TextField
+                                    label=""
+                                    labelHidden
+                                    value={drawerSettings.freeShippingBarColor}
+                                    onChange={(val) =>
+                                      setDrawerSettings({ ...drawerSettings, freeShippingBarColor: val })
+                                    }
+                                    autoComplete="off"
+                                  />
+                                </div>
+                              </InlineStack>
+                            </BlockStack>
                           </Box>
                         </InlineStack>
 
@@ -1131,14 +1156,39 @@ export function TotalBundleDashboard({ forcedFeature }: { forcedFeature?: "stick
                           autoComplete="off"
                         />
 
-                        <TextField
-                          label="Progress Bar Track (Background) Color"
-                          value={drawerSettings.freeShippingBarBgColor}
-                          onChange={(val) =>
-                            setDrawerSettings({ ...drawerSettings, freeShippingBarBgColor: val })
-                          }
-                          autoComplete="off"
-                        />
+                        <BlockStack gap="100">
+                          <Text as="span" variant="bodySm">Progress Bar Track (Background) Color</Text>
+                          <InlineStack gap="200" blockAlign="center">
+                            <input
+                              type="color"
+                              value={drawerSettings.freeShippingBarBgColor || "#e4e5e7"}
+                              onChange={(e) =>
+                                setDrawerSettings({ ...drawerSettings, freeShippingBarBgColor: e.target.value })
+                              }
+                              style={{
+                                width: "40px",
+                                height: "36px",
+                                padding: "2px",
+                                border: "1px solid #d1d5db",
+                                borderRadius: "6px",
+                                cursor: "pointer",
+                                backgroundColor: "#fff",
+                              }}
+                              aria-label="Pick progress bar track color"
+                            />
+                            <div style={{ flex: 1 }}>
+                              <TextField
+                                label=""
+                                labelHidden
+                                value={drawerSettings.freeShippingBarBgColor}
+                                onChange={(val) =>
+                                  setDrawerSettings({ ...drawerSettings, freeShippingBarBgColor: val })
+                                }
+                                autoComplete="off"
+                              />
+                            </div>
+                          </InlineStack>
+                        </BlockStack>
                       </BlockStack>
                     </Card>
                   )}
@@ -1599,6 +1649,41 @@ export function TotalBundleDashboard({ forcedFeature }: { forcedFeature?: "stick
                               }
                               autoComplete="off"
                             />
+                          </Box>
+                          <Box width="48%">
+                            <BlockStack gap="100">
+                              <Text as="span" variant="bodySm">Free Shipping Bar Color</Text>
+                              <InlineStack gap="200" blockAlign="center">
+                                <input
+                                  type="color"
+                                  value={drawerSettings.freeShippingBarColor || "#008060"}
+                                  onChange={(e) =>
+                                    setDrawerSettings({ ...drawerSettings, freeShippingBarColor: e.target.value })
+                                  }
+                                  style={{
+                                    width: "40px",
+                                    height: "36px",
+                                    padding: "2px",
+                                    border: "1px solid #d1d5db",
+                                    borderRadius: "6px",
+                                    cursor: "pointer",
+                                    backgroundColor: "#fff",
+                                  }}
+                                  aria-label="Pick free shipping bar color"
+                                />
+                                <div style={{ flex: 1 }}>
+                                  <TextField
+                                    label=""
+                                    labelHidden
+                                    value={drawerSettings.freeShippingBarColor}
+                                    onChange={(val) =>
+                                      setDrawerSettings({ ...drawerSettings, freeShippingBarColor: val })
+                                    }
+                                    autoComplete="off"
+                                  />
+                                </div>
+                              </InlineStack>
+                            </BlockStack>
                           </Box>
                         </InlineStack>
 
