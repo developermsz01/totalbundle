@@ -18,12 +18,17 @@ import {
   Checkbox,
   RangeSlider,
   ButtonGroup,
+  Modal,
+  Thumbnail,
+  Spinner,
 } from "@shopify/polaris";
 import {
   ExternalIcon,
   CheckIcon,
   DeleteIcon,
   PlusIcon,
+  ProductIcon,
+  SearchIcon,
 } from "@shopify/polaris-icons";
 import { TitleBar, useAppBridge } from "@shopify/app-bridge-react";
 import type {
@@ -52,6 +57,7 @@ export interface DashboardLoaderData {
   shop: string;
   stickySettings: StickyCartSettings;
   cartDrawerSettings: CartDrawerSettings;
+  storeProducts?: any[];
   initialFeature: "sticky-cart" | "cart-drawer";
   themeEditorUrl: string;
 }
@@ -62,6 +68,7 @@ export function TotalBundleDashboard({ forcedFeature }: { forcedFeature?: "stick
     shop,
     stickySettings: initialStickySettings,
     cartDrawerSettings: initialDrawerSettings,
+    storeProducts: initialStoreProducts = [],
     initialFeature: loaderFeature,
     themeEditorUrl,
   } = loaderData;
@@ -73,6 +80,12 @@ export function TotalBundleDashboard({ forcedFeature }: { forcedFeature?: "stick
   const appBridge = useAppBridge();
 
   const isSaving = navigation.state === "submitting";
+
+  // Store Product Picker states
+  const [productPickerOpen, setProductPickerOpen] = useState(false);
+  const [pickerSearchQuery, setPickerSearchQuery] = useState("");
+  const [activeStoreProducts, setActiveStoreProducts] = useState<any[]>(initialStoreProducts || []);
+  const [isSearchingProducts, setIsSearchingProducts] = useState(false);
 
   // Top-level category / module selector: "sticky-cart" | "cart-drawer"
   const [activeFeature, setActiveFeature] = useState<"sticky-cart" | "cart-drawer">(
@@ -219,6 +232,89 @@ export function TotalBundleDashboard({ forcedFeature }: { forcedFeature?: "stick
         item.id === id ? { ...item, ...updates } : item
       ),
     }));
+  };
+
+  // Launch Shopify ResourcePicker or built-in Product Modal
+  const handleOpenProductPicker = async () => {
+    try {
+      if (typeof window !== "undefined" && (window as any).shopify?.resourcePicker) {
+        const selection = await (window as any).shopify.resourcePicker({
+          type: "product",
+          multiple: true,
+        });
+
+        if (selection && Array.isArray(selection) && selection.length > 0) {
+          const newAddons: CartDrawerAddon[] = [];
+          selection.forEach((prod: any, idx: number) => {
+            const variant = prod.variants?.[0];
+            const rawVariantId = variant?.id || "";
+            const numericVariantId = String(rawVariantId).replace("gid://shopify/ProductVariant/", "");
+            const imgUrl = variant?.image?.originalSrc || prod.images?.[0]?.originalSrc || "https://cdn.shopify.com/s/files/1/0533/2089/files/placeholder-images-lifestyle-1_small.png";
+            const price = variant?.price ? (String(variant.price).startsWith("$") ? String(variant.price) : `$${variant.price}`) : "$0.00";
+            const comparePrice = variant?.compareAtPrice ? (String(variant.compareAtPrice).startsWith("$") ? String(variant.compareAtPrice) : `$${variant.compareAtPrice}`) : "";
+
+            newAddons.push({
+              id: `addon-store-${Date.now()}-${idx}`,
+              title: prod.title + (variant?.title && variant.title !== "Default Title" ? ` (${variant.title})` : ""),
+              price: price,
+              compareAtPrice: comparePrice,
+              image: imgUrl,
+              variantId: numericVariantId,
+            });
+          });
+
+          setDrawerSettings((prev) => ({
+            ...prev,
+            addonItems: [...(prev.addonItems || []).filter((it) => it.variantId), ...newAddons],
+          }));
+          return;
+        }
+      }
+    } catch (err) {
+      console.warn("[ResourcePicker] Native picker not available, opening built-in modal:", err);
+    }
+
+    setPickerSearchQuery("");
+    setActiveStoreProducts(initialStoreProducts || []);
+    setProductPickerOpen(true);
+  };
+
+  const handleSearchStoreProducts = async (query: string) => {
+    setPickerSearchQuery(query);
+    if (!query.trim()) {
+      setActiveStoreProducts(initialStoreProducts || []);
+      return;
+    }
+    setIsSearchingProducts(true);
+    try {
+      const res = await fetch(`/api/store-products?q=${encodeURIComponent(query)}`);
+      const data = await res.json();
+      if (data.success && Array.isArray(data.products)) {
+        setActiveStoreProducts(data.products);
+      }
+    } catch (e) {
+      console.error("Failed to search products:", e);
+    } finally {
+      setIsSearchingProducts(false);
+    }
+  };
+
+  const handleSelectStoreVariant = (product: any, variant: any) => {
+    const numericVariantId = String(variant.numericId || variant.id || "").replace("gid://shopify/ProductVariant/", "");
+    const newAddon: CartDrawerAddon = {
+      id: `addon-store-${Date.now()}`,
+      title: product.title + (variant.title && variant.title !== "Default Title" ? ` (${variant.title})` : ""),
+      price: variant.price || "$0.00",
+      compareAtPrice: variant.compareAtPrice || "",
+      image: variant.image || product.image || "https://cdn.shopify.com/s/files/1/0533/2089/files/placeholder-images-lifestyle-1_small.png",
+      variantId: numericVariantId,
+    };
+
+    setDrawerSettings((prev) => ({
+      ...prev,
+      addonItems: [...(prev.addonItems || []).filter((it) => it.variantId), newAddon],
+    }));
+    setProductPickerOpen(false);
   };
 
   // Drawer Preview interactions
@@ -1092,76 +1188,158 @@ export function TotalBundleDashboard({ forcedFeature }: { forcedFeature?: "stick
                         <Divider />
 
                         <InlineStack align="space-between" blockAlign="center">
-                          <Text as="h3" variant="headingSm">Configured Add-on Items</Text>
-                          <Button icon={PlusIcon} size="slim" onClick={handleAddAddonItem}>
-                            Add Item
-                          </Button>
+                          <BlockStack gap="050">
+                            <Text as="h3" variant="headingSm">Configured Add-on Items</Text>
+                            <Text as="p" variant="bodyXs" tone="subdued">
+                              Select products directly from your Shopify store. Customers can add them to cart with 1 click.
+                            </Text>
+                          </BlockStack>
+                          <ButtonGroup>
+                            <Button
+                              variant="primary"
+                              icon={ProductIcon}
+                              onClick={handleOpenProductPicker}
+                            >
+                              Select Products from Store
+                            </Button>
+                            <Button
+                              icon={PlusIcon}
+                              onClick={handleAddAddonItem}
+                            >
+                              + Add Custom Item
+                            </Button>
+                          </ButtonGroup>
                         </InlineStack>
 
-                        <BlockStack gap="300">
-                          {(drawerSettings.addonItems || []).map((addon, index) => (
-                            <Box
-                              key={addon.id}
-                              padding="300"
-                              background="bg-subdued"
-                              borderRadius="200"
-                            >
-                              <BlockStack gap="200">
-                                <InlineStack align="space-between" blockAlign="center">
-                                  <Text as="span" variant="bodySm" fontWeight="bold">
-                                    Item #{index + 1}
-                                  </Text>
-                                  <Button
-                                    icon={DeleteIcon}
-                                    variant="plain"
-                                    tone="critical"
-                                    onClick={() => handleRemoveAddonItem(addon.id)}
-                                  >
-                                    Remove
-                                  </Button>
-                                </InlineStack>
+                        {(!drawerSettings.addonItems || drawerSettings.addonItems.length === 0) ? (
+                          <Box
+                            padding="600"
+                            background="bg-subdued"
+                            borderRadius="200"
+                            textAlign="center"
+                          >
+                            <BlockStack gap="200" inlineAlign="center">
+                              <Icon source={ProductIcon} tone="subdued" />
+                              <Text as="p" variant="bodySm" fontWeight="semibold">
+                                No add-on products configured yet
+                              </Text>
+                              <Text as="p" variant="bodyXs" tone="subdued">
+                                Select high-converting companion products from your catalog (e.g. gift wrap, warranties, accessories).
+                              </Text>
+                              <Box paddingBlockStart="200">
+                                <Button variant="primary" icon={ProductIcon} onClick={handleOpenProductPicker}>
+                                  Select Products from Store
+                                </Button>
+                              </Box>
+                            </BlockStack>
+                          </Box>
+                        ) : (
+                          <BlockStack gap="300">
+                            {drawerSettings.addonItems.map((addon, index) => (
+                              <Box
+                                key={addon.id}
+                                padding="300"
+                                background="bg-subdued"
+                                borderRadius="200"
+                              >
+                                <BlockStack gap="300">
+                                  <InlineStack align="space-between" blockAlign="center">
+                                    <InlineStack gap="200" blockAlign="center">
+                                      <Text as="span" variant="bodySm" fontWeight="bold">
+                                        Item #{index + 1}
+                                      </Text>
+                                      {addon.variantId ? (
+                                        <Badge tone="success">Store Product Linked (ID: {addon.variantId})</Badge>
+                                      ) : (
+                                        <Badge tone="attention">Custom / Unlinked</Badge>
+                                      )}
+                                    </InlineStack>
+                                    <InlineStack gap="150">
+                                      <Button
+                                        size="micro"
+                                        variant="plain"
+                                        icon={ProductIcon}
+                                        onClick={handleOpenProductPicker}
+                                      >
+                                        Change Product
+                                      </Button>
+                                      <Button
+                                        icon={DeleteIcon}
+                                        variant="plain"
+                                        tone="critical"
+                                        onClick={() => handleRemoveAddonItem(addon.id)}
+                                      >
+                                        Remove
+                                      </Button>
+                                    </InlineStack>
+                                  </InlineStack>
 
-                                <InlineStack gap="300">
-                                  <Box width="48%">
-                                    <TextField
-                                      label="Title"
-                                      value={addon.title}
-                                      onChange={(val) => handleUpdateAddonItem(addon.id, { title: val })}
-                                      autoComplete="off"
-                                    />
-                                  </Box>
-                                  <Box width="48%">
-                                    <TextField
-                                      label="Price"
-                                      value={addon.price}
-                                      onChange={(val) => handleUpdateAddonItem(addon.id, { price: val })}
-                                      autoComplete="off"
-                                    />
-                                  </Box>
-                                </InlineStack>
+                                  <InlineStack gap="300" blockAlign="center">
+                                    {addon.image ? (
+                                      <Thumbnail
+                                        source={addon.image}
+                                        alt={addon.title}
+                                        size="medium"
+                                      />
+                                    ) : (
+                                      <Box
+                                        width="60px"
+                                        height="60px"
+                                        background="bg-surface-secondary"
+                                        borderRadius="200"
+                                        display="flex"
+                                        alignItems="center"
+                                        justifyContent="center"
+                                      >
+                                        <Icon source={ProductIcon} />
+                                      </Box>
+                                    )}
+                                    <Box width="85%">
+                                      <InlineStack gap="300">
+                                        <Box width="48%">
+                                          <TextField
+                                            label="Title"
+                                            value={addon.title}
+                                            onChange={(val) => handleUpdateAddonItem(addon.id, { title: val })}
+                                            autoComplete="off"
+                                          />
+                                        </Box>
+                                        <Box width="48%">
+                                          <TextField
+                                            label="Price"
+                                            value={addon.price}
+                                            onChange={(val) => handleUpdateAddonItem(addon.id, { price: val })}
+                                            autoComplete="off"
+                                          />
+                                        </Box>
+                                      </InlineStack>
+                                    </Box>
+                                  </InlineStack>
 
-                                <InlineStack gap="300">
-                                  <Box width="48%">
-                                    <TextField
-                                      label="Compare-at Price (Optional)"
-                                      value={addon.compareAtPrice || ""}
-                                      onChange={(val) => handleUpdateAddonItem(addon.id, { compareAtPrice: val })}
-                                      autoComplete="off"
-                                    />
-                                  </Box>
-                                  <Box width="48%">
-                                    <TextField
-                                      label="Image URL"
-                                      value={addon.image}
-                                      onChange={(val) => handleUpdateAddonItem(addon.id, { image: val })}
-                                      autoComplete="off"
-                                    />
-                                  </Box>
-                                </InlineStack>
-                              </BlockStack>
-                            </Box>
-                          ))}
-                        </BlockStack>
+                                  <InlineStack gap="300">
+                                    <Box width="48%">
+                                      <TextField
+                                        label="Compare-at Price (Optional)"
+                                        value={addon.compareAtPrice || ""}
+                                        onChange={(val) => handleUpdateAddonItem(addon.id, { compareAtPrice: val })}
+                                        autoComplete="off"
+                                      />
+                                    </Box>
+                                    <Box width="48%">
+                                      <TextField
+                                        label="Shopify Variant ID"
+                                        value={addon.variantId || ""}
+                                        onChange={(val) => handleUpdateAddonItem(addon.id, { variantId: val })}
+                                        autoComplete="off"
+                                        helpText="Numeric variant ID added to cart when customer clicks + Add"
+                                      />
+                                    </Box>
+                                  </InlineStack>
+                                </BlockStack>
+                              </Box>
+                            ))}
+                          </BlockStack>
+                        )}
                       </BlockStack>
                     </Card>
                   )}
@@ -1846,6 +2024,108 @@ export function TotalBundleDashboard({ forcedFeature }: { forcedFeature?: "stick
               </Layout.Section>
             </Layout>
           </BlockStack>
+        )}
+        {/* Built-in Store Product Picker Modal */}
+        {productPickerOpen && (
+          <Modal
+            open={productPickerOpen}
+            onClose={() => setProductPickerOpen(false)}
+            title="Select Products from Shopify Store"
+            primaryAction={{
+              content: "Done",
+              onAction: () => setProductPickerOpen(false),
+            }}
+          >
+            <Modal.Section>
+              <BlockStack gap="400">
+                <TextField
+                  label="Search Store Catalog"
+                  value={pickerSearchQuery}
+                  onChange={handleSearchStoreProducts}
+                  placeholder="Search products by title..."
+                  prefix={<Icon source={SearchIcon} />}
+                  autoComplete="off"
+                  clearButton
+                  onClearButtonClick={() => handleSearchStoreProducts("")}
+                />
+
+                {isSearchingProducts ? (
+                  <Box padding="600" display="flex" justifyContent="center">
+                    <Spinner size="large" />
+                  </Box>
+                ) : activeStoreProducts.length === 0 ? (
+                  <Box padding="400" textAlign="center">
+                    <Text as="p" tone="subdued">
+                      No matching products found. Check your Shopify product inventory or try another search.
+                    </Text>
+                  </Box>
+                ) : (
+                  <Box maxHeight="420px" overflowY="auto">
+                    <BlockStack gap="300">
+                      {activeStoreProducts.map((prod) => (
+                        <Box
+                          key={prod.id}
+                          padding="300"
+                          borderWidth="025"
+                          borderColor="border"
+                          borderRadius="200"
+                          background="bg-subdued"
+                        >
+                          <InlineStack align="space-between" blockAlign="center">
+                            <InlineStack gap="300" blockAlign="center">
+                              {prod.image ? (
+                                <Thumbnail source={prod.image} alt={prod.title} size="small" />
+                              ) : (
+                                <Box width="40px" height="40px" background="bg-surface-secondary" borderRadius="100" display="flex" alignItems="center" justifyContent="center">
+                                  <Icon source={ProductIcon} />
+                                </Box>
+                              )}
+                              <BlockStack gap="050">
+                                <Text as="p" variant="bodyMd" fontWeight="semibold">
+                                  {prod.title}
+                                </Text>
+                                <Text as="p" variant="bodyXs" tone="subdued">
+                                  {prod.variants?.length || 1} variant(s) available
+                                </Text>
+                              </BlockStack>
+                            </InlineStack>
+
+                            {prod.variants && prod.variants.length > 1 ? (
+                              <Box width="200px">
+                                <Select
+                                  label="Select variant"
+                                  labelHidden
+                                  options={[
+                                    { label: "Choose variant...", value: "" },
+                                    ...prod.variants.map((v: any) => ({
+                                      label: `${v.title} (${v.price})`,
+                                      value: v.id,
+                                    })),
+                                  ]}
+                                  onChange={(selId) => {
+                                    const v = prod.variants.find((item: any) => item.id === selId);
+                                    if (v) handleSelectStoreVariant(prod, v);
+                                  }}
+                                />
+                              </Box>
+                            ) : (
+                              <Button
+                                variant="primary"
+                                size="slim"
+                                onClick={() => handleSelectStoreVariant(prod, prod.variants?.[0] || { id: prod.id, price: "$0.00" })}
+                              >
+                                + Select ({prod.variants?.[0]?.price || "$0.00"})
+                              </Button>
+                            )}
+                          </InlineStack>
+                        </Box>
+                      ))}
+                    </BlockStack>
+                  </Box>
+                )}
+              </BlockStack>
+            </Modal.Section>
+          </Modal>
         )}
       </BlockStack>
     </Page>

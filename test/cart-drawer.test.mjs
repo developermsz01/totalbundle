@@ -146,9 +146,32 @@ describe('Cart Drawer Storefront Theme App Extension Structure', () => {
     assert.ok(drawerContent.includes('{% render \'cart-drawer-component\''), 'Must render cart-drawer-component');
   });
 
-  it('app/routes/api.cart-drawer-settings.ts exists for public API', () => {
+  it('app/routes/api.cart-drawer-settings.ts and api.store-products.ts exist', () => {
     const filePath = path.join(rootDir, 'app/routes/api.cart-drawer-settings.ts');
     assert.ok(fs.existsSync(filePath), 'api.cart-drawer-settings.ts must exist');
+
+    const productsApi = path.join(rootDir, 'app/routes/api.store-products.ts');
+    assert.ok(fs.existsSync(productsApi), 'api.store-products.ts must exist for product selection');
+  });
+
+  it('correctly associates selected Shopify store products with variantId in addon settings', () => {
+    const shop = 'variant-test-shop.myshopify.com';
+    const saved = saveCartDrawerSettings(shop, {
+      addonItems: [
+        {
+          id: 'store-addon-1',
+          title: 'Premium Gift Wrap',
+          price: '$5.00',
+          compareAtPrice: '$10.00',
+          image: 'https://example.com/wrap.jpg',
+          variantId: '448899112233',
+        },
+      ],
+    });
+
+    assert.equal(saved.addonItems.length, 1);
+    assert.equal(saved.addonItems[0].variantId, '448899112233');
+    assert.equal(saved.addonItems[0].title, 'Premium Gift Wrap');
   });
 });
 

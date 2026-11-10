@@ -15,11 +15,80 @@ export async function handleDashboardLoader(
   forcedFeature?: "sticky-cart" | "cart-drawer"
 ) {
   let shop = "your-store.myshopify.com";
+  let storeProducts: Array<{
+    id: string;
+    title: string;
+    handle: string;
+    image: string;
+    variants: Array<{
+      id: string;
+      numericId: string;
+      title: string;
+      price: string;
+      compareAtPrice: string;
+      image: string;
+    }>;
+  }> = [];
 
   try {
     const authResult = await authenticate.admin(request);
     if (authResult?.session?.shop) {
       shop = authResult.session.shop;
+    }
+    if (authResult?.admin) {
+      try {
+        const prodRes = await authResult.admin.graphql(`
+          query GetStoreProductsInitial {
+            products(first: 30) {
+              nodes {
+                id
+                title
+                handle
+                featuredMedia {
+                  ... on MediaImage {
+                    image {
+                      url
+                    }
+                  }
+                }
+                variants(first: 10) {
+                  nodes {
+                    id
+                    title
+                    price
+                    compareAtPrice
+                    image {
+                      url
+                    }
+                  }
+                }
+              }
+            }
+          }
+        `);
+        const prodData = await prodRes.json();
+        const nodes = prodData?.data?.products?.nodes || [];
+        storeProducts = nodes.map((p: any) => ({
+          id: p.id,
+          title: p.title,
+          handle: p.handle,
+          image: p.featuredMedia?.image?.url || "",
+          variants: (p.variants?.nodes || []).map((v: any) => ({
+            id: v.id,
+            numericId: String(v.id).replace("gid://shopify/ProductVariant/", ""),
+            title: v.title,
+            price: v.price ? (String(v.price).startsWith("$") ? String(v.price) : `$${v.price}`) : "$0.00",
+            compareAtPrice: v.compareAtPrice
+              ? String(v.compareAtPrice).startsWith("$")
+                ? String(v.compareAtPrice)
+                : `$${v.compareAtPrice}`
+              : "",
+            image: v.image?.url || p.featuredMedia?.image?.url || "",
+          })),
+        }));
+      } catch (gqlErr) {
+        console.warn("[handleDashboardLoader] Failed to fetch store products:", gqlErr);
+      }
     }
   } catch (authError) {
     if (authError instanceof Response) {
@@ -46,6 +115,7 @@ export async function handleDashboardLoader(
     shop,
     stickySettings,
     cartDrawerSettings,
+    storeProducts,
     initialFeature,
     themeEditorUrl: `https://${shop}/admin/themes/current/editor?context=apps`,
   });

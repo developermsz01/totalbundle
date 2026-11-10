@@ -503,7 +503,11 @@
       };
     }
 
-    fetch('/cart/add.js', {
+    var addUrl = window.Shopify && window.Shopify.routes && window.Shopify.routes.root
+      ? window.Shopify.routes.root + 'cart/add.js'
+      : '/cart/add.js';
+
+    fetch(addUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -511,7 +515,12 @@
       },
       body: JSON.stringify(payload),
     })
-      .then(function (res) { return res.json(); })
+      .then(function (res) {
+        if (!res.ok) {
+          return res.json().then(function (err) { throw err; });
+        }
+        return res.json();
+      })
       .then(function () {
         button.classList.remove('tb-loading');
         button.textContent = '✓ Added';
@@ -520,9 +529,10 @@
         }, 1500);
         self.refresh();
       })
-      .catch(function () {
+      .catch(function (err) {
         button.classList.remove('tb-loading');
         button.textContent = originalText;
+        console.warn('[TotalBundle] Addon add error:', err);
         self.refresh();
       });
   };
