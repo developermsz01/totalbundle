@@ -189,12 +189,21 @@ cart-drawer.active ~ .cart-drawer-backdrop,
   flex-shrink: 0;
 }
 
+.tb-free-shipping-section {
+  padding: 14px 20px 12px 20px;
+  background-color: var(--tb-drawer-bg);
+  border-bottom: 1px solid var(--tb-drawer-border);
+  transition: all 0.3s ease;
+}
+
 .tb-free-shipping-text {
   font-size: 13px;
   font-weight: 500;
   text-align: center;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
   color: var(--tb-drawer-text);
+  line-height: 1.4;
+  transition: all 0.3s ease;
 }
 
 .tb-free-shipping-text strong {
@@ -202,31 +211,54 @@ cart-drawer.active ~ .cart-drawer-backdrop,
   font-weight: 700;
 }
 
+.tb-free-shipping-section.tb-is-complete .tb-free-shipping-text {
+  color: var(--tb-free-shipping-bar);
+  font-weight: 700;
+}
+
 .tb-free-shipping-track {
   width: 100%;
-  height: 7px;
+  height: 9px;
   border-radius: 999px;
-  background-color: var(--tb-free-shipping-bg);
+  background-color: var(--tb-free-shipping-bg, #e4e5e7);
   overflow: hidden;
   position: relative;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.06);
 }
 
 .tb-free-shipping-fill {
   height: 100%;
   width: 0%;
-  background-color: var(--tb-free-shipping-bar);
+  background: var(--tb-free-shipping-bar, #008060);
   border-radius: 999px;
-  transition: width 0.4s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.3s;
+  transition: width 0.6s cubic-bezier(0.25, 1, 0.5, 1);
+  position: relative;
+}
+
+.tb-free-shipping-fill::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.35) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  animation: tb-shimmer 2.2s infinite ease-in-out;
+}
+
+@keyframes tb-shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
 }
 
 .tb-free-shipping-fill.tb-complete {
-  animation: tb-pulse-fill 1.8s infinite;
-}
-
-@keyframes tb-pulse-fill {
-  0% { opacity: 0.9; }
-  50% { opacity: 1; }
-  100% { opacity: 0.9; }
+  background: var(--tb-free-shipping-bar, #008060) !important;
+  box-shadow: 0 0 10px rgba(0, 128, 96, 0.4);
 }
 
 /* Scrollable Body Content */

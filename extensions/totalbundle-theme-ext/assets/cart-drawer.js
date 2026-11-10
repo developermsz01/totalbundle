@@ -61,6 +61,7 @@
     this.hijackThemeProductForms();
     this.initThemeInterceptors();
     this.initEvents();
+    this.refresh();
   }
 
   /**
@@ -447,7 +448,11 @@
 
   TotalBundleCartDrawer.prototype.refresh = function () {
     var self = this;
-    fetch('/cart.js', { headers: { 'Accept': 'application/json' } })
+    var cartUrl = (window.Shopify && window.Shopify.routes && window.Shopify.routes.root
+      ? window.Shopify.routes.root + 'cart.js'
+      : '/cart.js') + '?_tb=' + Date.now();
+
+    fetch(cartUrl, { headers: { 'Accept': 'application/json' } })
       .then(function (res) { return res.json(); })
       .then(function (cart) {
         self.renderCart(cart);
@@ -630,18 +635,23 @@
     if (!this.shippingSection || !this.shippingFillEl || !this.shippingTextEl) return;
 
     var thresholdCents = this.threshold * 100;
+    if (thresholdCents <= 0) thresholdCents = 5000;
+
     var percentage = Math.min(100, Math.max(0, Math.round((totalPriceCents / thresholdCents) * 100)));
 
+    // Animate fill bar width from 0% up to 100% complete
     this.shippingFillEl.style.width = percentage + '%';
 
     if (percentage >= 100) {
       this.shippingFillEl.classList.add('tb-complete');
+      this.shippingSection.classList.add('tb-is-complete');
       this.shippingTextEl.innerHTML = this.shippingSuccessText;
     } else {
       this.shippingFillEl.classList.remove('tb-complete');
-      var remainingCents = thresholdCents - totalPriceCents;
+      this.shippingSection.classList.remove('tb-is-complete');
+      var remainingCents = Math.max(0, thresholdCents - totalPriceCents);
       var remainingFormatted = formatMoney(remainingCents);
-      var msg = this.shippingText.replace('{amount}', '<strong>' + remainingFormatted + '</strong>');
+      var msg = this.shippingText.replace(/\{?\s*\{?\s*amount\s*\}?\s*\}?/gi, '<strong>' + remainingFormatted + '</strong>');
       this.shippingTextEl.innerHTML = msg;
     }
   };
