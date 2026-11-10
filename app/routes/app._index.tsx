@@ -543,6 +543,10 @@ export default function TotalBundleDashboard() {
                       onClick={() => setStickyStep(s.id)}
                       style={{
                         flex: "1 1 180px",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "flex-start",
+                        gap: "10px",
                         padding: "10px 14px",
                         borderRadius: "8px",
                         border: isActive ? "2px solid #008060" : "1px solid #e1e3e5",
@@ -552,37 +556,52 @@ export default function TotalBundleDashboard() {
                         transition: "all 0.15s ease",
                       }}
                     >
-                      <InlineStack gap="200" blockAlign="center">
+                      <span
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          width: "22px",
+                          height: "22px",
+                          borderRadius: "50%",
+                          backgroundColor: isActive ? "#008060" : isDone ? "#202223" : "#e1e3e5",
+                          color: "#ffffff",
+                          fontSize: "12px",
+                          fontWeight: "700",
+                          flexShrink: 0,
+                        }}
+                      >
+                        {isDone ? "✓" : s.id}
+                      </span>
+                      <div
+                        style={{
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: "2px",
+                          minWidth: 0,
+                          textAlign: "left",
+                        }}
+                      >
                         <span
                           style={{
-                            display: "inline-flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            width: "22px",
-                            height: "22px",
-                            borderRadius: "50%",
-                            backgroundColor: isActive ? "#008060" : isDone ? "#202223" : "#e1e3e5",
-                            color: "#ffffff",
-                            fontSize: "12px",
-                            fontWeight: "700",
+                            fontSize: "13px",
+                            fontWeight: isActive ? 700 : 600,
+                            color: isActive ? "#008060" : "#202223",
+                            lineHeight: 1.2,
                           }}
                         >
-                          {isDone ? "✓" : s.id}
+                          {s.shortTitle}
                         </span>
-                        <BlockStack gap="050">
-                          <Text
-                            as="span"
-                            variant="bodySm"
-                            fontWeight={isActive ? "bold" : "medium"}
-                            tone={isActive ? "success" : undefined}
-                          >
-                            {s.shortTitle}
-                          </Text>
-                          <Text as="span" variant="bodyXs" tone="subdued">
-                            {s.subtitle}
-                          </Text>
-                        </BlockStack>
-                      </InlineStack>
+                        <span
+                          style={{
+                            fontSize: "11px",
+                            color: "#6d7175",
+                            lineHeight: 1.2,
+                          }}
+                        >
+                          {s.subtitle}
+                        </span>
+                      </div>
                     </button>
                   );
                 })}
@@ -1041,6 +1060,10 @@ export default function TotalBundleDashboard() {
                       onClick={() => setDrawerStep(s.id)}
                       style={{
                         flex: "1 1 180px",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "flex-start",
+                        gap: "10px",
                         padding: "10px 14px",
                         borderRadius: "8px",
                         border: isActive ? "2px solid #008060" : "1px solid #e1e3e5",
@@ -1050,37 +1073,52 @@ export default function TotalBundleDashboard() {
                         transition: "all 0.15s ease",
                       }}
                     >
-                      <InlineStack gap="200" blockAlign="center">
+                      <span
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          width: "22px",
+                          height: "22px",
+                          borderRadius: "50%",
+                          backgroundColor: isActive ? "#008060" : isDone ? "#202223" : "#e1e3e5",
+                          color: "#ffffff",
+                          fontSize: "12px",
+                          fontWeight: "700",
+                          flexShrink: 0,
+                        }}
+                      >
+                        {isDone ? "✓" : s.id}
+                      </span>
+                      <div
+                        style={{
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: "2px",
+                          minWidth: 0,
+                          textAlign: "left",
+                        }}
+                      >
                         <span
                           style={{
-                            display: "inline-flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            width: "22px",
-                            height: "22px",
-                            borderRadius: "50%",
-                            backgroundColor: isActive ? "#008060" : isDone ? "#202223" : "#e1e3e5",
-                            color: "#ffffff",
-                            fontSize: "12px",
-                            fontWeight: "700",
+                            fontSize: "13px",
+                            fontWeight: isActive ? 700 : 600,
+                            color: isActive ? "#008060" : "#202223",
+                            lineHeight: 1.2,
                           }}
                         >
-                          {isDone ? "✓" : s.id}
+                          {s.shortTitle}
                         </span>
-                        <BlockStack gap="050">
-                          <Text
-                            as="span"
-                            variant="bodySm"
-                            fontWeight={isActive ? "bold" : "medium"}
-                            tone={isActive ? "success" : undefined}
-                          >
-                            {s.shortTitle}
-                          </Text>
-                          <Text as="span" variant="bodyXs" tone="subdued">
-                            {s.subtitle}
-                          </Text>
-                        </BlockStack>
-                      </InlineStack>
+                        <span
+                          style={{
+                            fontSize: "11px",
+                            color: "#6d7175",
+                            lineHeight: 1.2,
+                          }}
+                        >
+                          {s.subtitle}
+                        </span>
+                      </div>
                     </button>
                   );
                 })}

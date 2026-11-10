@@ -156,3 +156,4 @@ describe('Cart Drawer Storefront Theme App Extension Structure', () => {
     assert.ok(fs.existsSync(filePath), 'api.cart-drawer-settings.ts must exist');
   });
 });
+
