@@ -29,10 +29,13 @@ export default function App() {
   return (
     <AppProvider isEmbeddedApp apiKey={apiKey}>
       <NavMenu>
-        <Link to="/app?feature=sticky-cart" rel="home">
+        <Link to="/app" rel="home">
+          TotalBundles
+        </Link>
+        <Link to="/app/sticky-cart">
           Sticky Add to Cart
         </Link>
-        <Link to="/app?feature=cart-drawer">
+        <Link to="/app/cart-drawer">
           Cart Drawer
         </Link>
         <Link to="/app/additional">Documentation</Link>
