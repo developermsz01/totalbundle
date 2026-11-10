@@ -13,3 +13,4 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 export default function CartDrawerRoute() {
   return <TotalBundleDashboard forcedFeature="cart-drawer" />;
 }
+

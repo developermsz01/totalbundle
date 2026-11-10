@@ -1,7 +1,11 @@
 /**
  * TotalBundle Cart Drawer JavaScript
  * Slide-out Ajax cart with Free Shipping Bar, Product Add-on functionality,
- * and automatic Theme Drawer & Cart Notification suppression.
+ * and universal suppression of ALL native theme cart behaviors:
+ * 1. "Page" mode (intercepts /cart redirect)
+ * 2. "Drawer" mode (suppresses theme cart-drawer)
+ * 3. "Popup notification" mode (suppresses cart-notification)
+ * 4. Across Dawn and all Shopify OS 2.0 & vintage themes.
  */
 
 (function () {
@@ -19,7 +23,7 @@
   }
 
   function TotalBundleCartDrawer() {
-    // Handle DOM deduplication if rendered multiple times
+    // 1. DOM Deduplication: ensure only one drawer exists in the document
     var allDrawers = document.querySelectorAll('.tb-cart-drawer');
     if (allDrawers.length > 1) {
       for (var d = 1; d < allDrawers.length; d++) {
@@ -52,7 +56,9 @@
     this.noteTextarea = this.drawer.querySelector('.tb-drawer-note-textarea');
     this.noteToggle = this.drawer.querySelector('.tb-drawer-note-toggle');
 
+    // Run active suppression and setup interceptors
     this.suppressThemeDrawer();
+    this.hijackThemeProductForms();
     this.initThemeInterceptors();
     this.initEvents();
   }
@@ -95,7 +101,93 @@
   };
 
   /**
-   * Setup active listeners and monkey-patches to stop theme drawers from opening
+   * Critical: Hijack Dawn & OS 2.0 Product Forms
+   * In Dawn, when Cart Type is "Page", product-form checks:
+   * if (!this.cart) { window.location = window.routes.cart_url; return; }
+   * We attach a proxy cart to EVERY product-form and its prototype so it NEVER redirects to /cart,
+   * but opens our TotalBundle Cart Drawer instead!
+   */
+  TotalBundleCartDrawer.prototype.hijackThemeProductForms = function () {
+    var self = this;
+
+    var proxyCart = {
+      renderContents: function () {
+        self.suppressThemeDrawer();
+        self.openAndRefresh();
+      },
+      open: function () {
+        self.suppressThemeDrawer();
+        self.openAndRefresh();
+      },
+      close: function () {},
+      classList: {
+        contains: function () { return false; },
+        add: function () {},
+        remove: function () {},
+      },
+    };
+
+    function attachToForms() {
+      // 1. Direct attachment to all product-form elements on the page
+      var productForms = document.querySelectorAll('product-form');
+      productForms.forEach(function (pf) {
+        pf.cart = proxyCart;
+      });
+
+      // 2. Override on custom element prototype if available
+      if (window.customElements) {
+        try {
+          var PFClass = customElements.get('product-form');
+          if (PFClass && PFClass.prototype) {
+            Object.defineProperty(PFClass.prototype, 'cart', {
+              get: function () {
+                return proxyCart;
+              },
+              set: function () {},
+              configurable: true,
+            });
+          }
+        } catch (e) {}
+
+        // 3. Override cart-drawer and cart-notification elements
+        try {
+          var CDClass = customElements.get('cart-drawer');
+          if (CDClass && CDClass.prototype) {
+            CDClass.prototype.open = function () {
+              self.suppressThemeDrawer();
+              self.openAndRefresh();
+            };
+            CDClass.prototype.renderContents = function () {
+              self.suppressThemeDrawer();
+              self.openAndRefresh();
+            };
+          }
+        } catch (e) {}
+
+        try {
+          var CNClass = customElements.get('cart-notification');
+          if (CNClass && CNClass.prototype) {
+            CNClass.prototype.open = function () {
+              self.suppressThemeDrawer();
+              self.openAndRefresh();
+            };
+            CNClass.prototype.renderContents = function () {
+              self.suppressThemeDrawer();
+              self.openAndRefresh();
+            };
+          }
+        } catch (e) {}
+      }
+    }
+
+    attachToForms();
+    // Re-run periodically as dynamic sections or variants load
+    setTimeout(attachToForms, 400);
+    setTimeout(attachToForms, 1500);
+  };
+
+  /**
+   * Setup active listeners, fetch monkey-patch, and MutationObserver
    */
   TotalBundleCartDrawer.prototype.initThemeInterceptors = function () {
     var self = this;
@@ -168,33 +260,17 @@
       };
     }
 
-    // 4. Override Dawn customElements if registered
-    function patchCustomElements() {
-      var dawnDrawer = document.querySelector('cart-drawer');
-      if (dawnDrawer) {
-        dawnDrawer.open = function () {
-          self.suppressThemeDrawer();
-          self.openAndRefresh();
-        };
-        dawnDrawer.renderContents = function () {
-          self.suppressThemeDrawer();
-          self.openAndRefresh();
-        };
-      }
-      var dawnNotif = document.querySelector('cart-notification');
-      if (dawnNotif) {
-        dawnNotif.open = function () {
-          self.suppressThemeDrawer();
-          self.openAndRefresh();
-        };
-        dawnNotif.renderContents = function () {
-          self.suppressThemeDrawer();
-          self.openAndRefresh();
-        };
-      }
+    // 4. jQuery AJAX listener for vintage or commercial themes
+    if (window.jQuery) {
+      try {
+        window.jQuery(document).ajaxComplete(function (event, xhr, settings) {
+          if (settings && settings.url && (settings.url.indexOf('/cart/add') !== -1 || settings.url.indexOf('/cart/add.js') !== -1)) {
+            self.suppressThemeDrawer();
+            self.openAndRefresh();
+          }
+        });
+      } catch (jqErr) {}
     }
-    patchCustomElements();
-    setTimeout(patchCustomElements, 1000);
   };
 
   TotalBundleCartDrawer.prototype.initEvents = function () {
@@ -261,7 +337,7 @@
       function (e) {
         var form = e.target;
         if (form && form.action && form.action.indexOf('/cart/add') !== -1) {
-          // If theme form is standard submit (or page redirect), intercept and ajax add
+          // If theme form is standard submit (Page mode), intercept and Ajax add
           e.preventDefault();
           e.stopPropagation();
           e.stopImmediatePropagation();

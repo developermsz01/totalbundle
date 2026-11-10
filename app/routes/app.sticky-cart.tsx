@@ -13,3 +13,4 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 export default function StickyCartRoute() {
   return <TotalBundleDashboard forcedFeature="sticky-cart" />;
 }
+
