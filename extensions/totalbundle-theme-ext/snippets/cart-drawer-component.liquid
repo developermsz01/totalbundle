@@ -143,7 +143,8 @@
             {{ shipping_success_text }}
           {%- else -%}
             {%- assign remaining_money = remaining_cents | money -%}
-            {{ shipping_text | replace: '{amount}', remaining_money }}
+            {%- assign amount_placeholder = '{' | append: 'amount}' -%}
+            {{ shipping_text | replace: amount_placeholder, remaining_money }}
           {%- endif -%}
         </div>
         <div class="tb-free-shipping-track">
@@ -283,7 +284,7 @@
       </a>
 
       {%- if show_view_cart -%}
-        <a href="/cart" class="tb-drawer-view-cart-link">{{ view_cart_label }}</a>
+        <a href="{{ routes.cart_url }}" class="tb-drawer-view-cart-link">{{ view_cart_label }}</a>
       {%- endif -%}
     </footer>
   </aside>
