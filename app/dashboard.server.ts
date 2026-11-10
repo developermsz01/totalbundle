@@ -147,21 +147,55 @@ export async function handleDashboardAction(request: Request) {
         const parsed = JSON.parse(String(rawSettings)) as CartDrawerSettings;
         const updated = saveCartDrawerSettings(shop, parsed);
 
-        // Sync settings to Shopify App Metafield (namespace: cart_drawer)
+        // Sync settings to Shopify Metafields (both App Installation and Shop for 100% Liquid availability)
         if (admin) {
           try {
-            const appInstallRes = await admin.graphql(
+            const shopQueryRes = await admin.graphql(
               `#graphql
-              query {
+              query GetShopAndAppId {
+                shop {
+                  id
+                }
                 currentAppInstallation {
                   id
                 }
               }`
             );
-            const appInstallJson = await appInstallRes.json();
-            const appInstallationId = appInstallJson?.data?.currentAppInstallation?.id;
+            const shopQueryJson = await shopQueryRes.json();
+            const shopId = shopQueryJson?.data?.shop?.id;
+            const appInstallationId = shopQueryJson?.data?.currentAppInstallation?.id;
+
+            const metafieldsToSet: Array<{
+              namespace: string;
+              key: string;
+              type: string;
+              value: string;
+              ownerId: string;
+            }> = [];
+
+            const serializedSettings = JSON.stringify(updated);
+
+            if (shopId) {
+              metafieldsToSet.push({
+                namespace: "cart_drawer",
+                key: "settings",
+                type: "json",
+                value: serializedSettings,
+                ownerId: shopId,
+              });
+            }
 
             if (appInstallationId) {
+              metafieldsToSet.push({
+                namespace: "cart_drawer",
+                key: "settings",
+                type: "json",
+                value: serializedSettings,
+                ownerId: appInstallationId,
+              });
+            }
+
+            if (metafieldsToSet.length > 0) {
               await admin.graphql(
                 `#graphql
                 mutation SaveCartDrawerSettings($metafieldsSetInput: [MetafieldsSetInput!]!) {
@@ -179,15 +213,7 @@ export async function handleDashboardAction(request: Request) {
                 }`,
                 {
                   variables: {
-                    metafieldsSetInput: [
-                      {
-                        namespace: "cart_drawer",
-                        key: "settings",
-                        type: "json",
-                        value: JSON.stringify(updated),
-                        ownerId: appInstallationId,
-                      },
-                    ],
+                    metafieldsSetInput: metafieldsToSet,
                   },
                 }
               );
@@ -203,21 +229,55 @@ export async function handleDashboardAction(request: Request) {
         const parsed = JSON.parse(String(rawSettings)) as StickyCartSettings;
         const updated = saveStickyCartSettings(shop, parsed);
 
-        // Sync settings to Shopify App Metafield (namespace: sticky_cart)
+        // Sync settings to Shopify Metafields (both App Installation and Shop)
         if (admin) {
           try {
-            const appInstallRes = await admin.graphql(
+            const shopQueryRes = await admin.graphql(
               `#graphql
-              query {
+              query GetShopAndAppIdSticky {
+                shop {
+                  id
+                }
                 currentAppInstallation {
                   id
                 }
               }`
             );
-            const appInstallJson = await appInstallRes.json();
-            const appInstallationId = appInstallJson?.data?.currentAppInstallation?.id;
+            const shopQueryJson = await shopQueryRes.json();
+            const shopId = shopQueryJson?.data?.shop?.id;
+            const appInstallationId = shopQueryJson?.data?.currentAppInstallation?.id;
+
+            const metafieldsToSet: Array<{
+              namespace: string;
+              key: string;
+              type: string;
+              value: string;
+              ownerId: string;
+            }> = [];
+
+            const serializedSettings = JSON.stringify(updated);
+
+            if (shopId) {
+              metafieldsToSet.push({
+                namespace: "sticky_cart",
+                key: "settings",
+                type: "json",
+                value: serializedSettings,
+                ownerId: shopId,
+              });
+            }
 
             if (appInstallationId) {
+              metafieldsToSet.push({
+                namespace: "sticky_cart",
+                key: "settings",
+                type: "json",
+                value: serializedSettings,
+                ownerId: appInstallationId,
+              });
+            }
+
+            if (metafieldsToSet.length > 0) {
               await admin.graphql(
                 `#graphql
                 mutation SaveStickyCartSettings($metafieldsSetInput: [MetafieldsSetInput!]!) {
@@ -235,15 +295,7 @@ export async function handleDashboardAction(request: Request) {
                 }`,
                 {
                   variables: {
-                    metafieldsSetInput: [
-                      {
-                        namespace: "sticky_cart",
-                        key: "settings",
-                        type: "json",
-                        value: JSON.stringify(updated),
-                        ownerId: appInstallationId,
-                      },
-                    ],
+                    metafieldsSetInput: metafieldsToSet,
                   },
                 }
               );

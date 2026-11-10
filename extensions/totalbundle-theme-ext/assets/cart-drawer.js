@@ -80,7 +80,52 @@
     // Initialize free shipping bar state immediately with initial server cart total
     var initTotal = parseInt(this.drawer.dataset.cartTotal, 10) || 0;
     this.updateFreeShippingBar(initTotal);
+
+    // Fetch live dashboard settings to guarantee real-time color and threshold sync
+    this.fetchLiveSettings();
   }
+
+  /**
+   * Fetch live settings from app API as a resilient fallback
+   * to guarantee selected colors and threshold update immediately
+   */
+  TotalBundleCartDrawer.prototype.fetchLiveSettings = function () {
+    var self = this;
+    var shopDomain = window.Shopify && window.Shopify.shop ? window.Shopify.shop : '';
+    if (!shopDomain) return;
+
+    var apiUrl = 'https://totalbundle.vercel.app/api/cart-drawer-settings?shop=' + encodeURIComponent(shopDomain);
+    fetch(apiUrl, { mode: 'cors' })
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        if (data && data.settings) {
+          var s = data.settings;
+          if (s.freeShippingBarColor) {
+            self.barColor = s.freeShippingBarColor;
+            self.drawer.dataset.freeShippingBarColor = s.freeShippingBarColor;
+          }
+          if (s.freeShippingBarBgColor) {
+            self.barBgColor = s.freeShippingBarBgColor;
+            self.drawer.dataset.freeShippingBarBgColor = s.freeShippingBarBgColor;
+          }
+          if (s.freeShippingThreshold) {
+            self.threshold = parseFloat(s.freeShippingThreshold) || self.threshold;
+            self.drawer.dataset.freeShippingThreshold = String(s.freeShippingThreshold);
+          }
+          if (s.freeShippingText) {
+            self.shippingText = s.freeShippingText;
+            self.drawer.dataset.freeShippingText = s.freeShippingText;
+          }
+          if (s.freeShippingSuccessText) {
+            self.shippingSuccessText = s.freeShippingSuccessText;
+            self.drawer.dataset.freeShippingSuccessText = s.freeShippingSuccessText;
+          }
+          var currentTotal = parseInt(self.drawer.dataset.cartTotal, 10) || 0;
+          self.updateFreeShippingBar(currentTotal);
+        }
+      })
+      .catch(function () {});
+  };
 
   /**
    * Completely suppress & close all native theme drawers, popups, and notifications
@@ -716,11 +761,16 @@
     var barColor = this.drawer.dataset.freeShippingBarColor || this.barColor || '#008060';
     var trackColor = this.drawer.dataset.freeShippingBarBgColor || this.barBgColor || '#e4e5e7';
     this.shippingFillEl.style.setProperty('background-color', barColor, 'important');
+    this.shippingFillEl.style.setProperty('background', barColor, 'important');
     this.shippingFillEl.style.minWidth = '8px';
+    this.shippingFillEl.style.height = '10px';
+    this.shippingFillEl.style.display = 'block';
 
     var trackEl = this.shippingSection.querySelector('.tb-free-shipping-track');
     if (trackEl) {
       trackEl.style.backgroundColor = trackColor;
+      trackEl.style.height = '10px';
+      trackEl.style.display = 'block';
     }
 
     // Animate fill bar width from 0% up to 100% complete
