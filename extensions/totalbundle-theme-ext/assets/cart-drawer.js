@@ -76,7 +76,10 @@
     this.hijackThemeProductForms();
     this.initThemeInterceptors();
     this.initEvents();
-    // Do NOT call this.refresh() here — interceptors will catch first open
+
+    // Initialize free shipping bar state immediately with initial server cart total
+    var initTotal = parseInt(this.drawer.dataset.cartTotal, 10) || 0;
+    this.updateFreeShippingBar(initTotal);
   }
 
   /**
@@ -701,16 +704,20 @@
 
     if (!this.shippingSection || !this.shippingFillEl || !this.shippingTextEl) return;
 
-    var thresholdCents = this.threshold * 100;
+    // Always read threshold fresh from DOM dataset or property
+    var threshold = parseFloat(this.drawer.dataset.freeShippingThreshold) || this.threshold || 50;
+    var thresholdCents = threshold * 100;
     if (thresholdCents <= 0) thresholdCents = 5000;
 
     var priceCents = typeof totalPriceCents === 'number' ? totalPriceCents : parseInt(totalPriceCents, 10) || 0;
     var percentage = Math.min(100, Math.max(0, Math.round((priceCents / thresholdCents) * 100)));
 
-    // Ensure colors are directly applied to the DOM elements
-    var barColor = this.barColor || this.drawer.dataset.freeShippingBarColor || '#008060';
-    var trackColor = this.barBgColor || this.drawer.dataset.freeShippingBarBgColor || '#e4e5e7';
-    this.shippingFillEl.style.backgroundColor = barColor;
+    // Ensure colors are directly applied to the DOM elements with high priority
+    var barColor = this.drawer.dataset.freeShippingBarColor || this.barColor || '#008060';
+    var trackColor = this.drawer.dataset.freeShippingBarBgColor || this.barBgColor || '#e4e5e7';
+    this.shippingFillEl.style.setProperty('background-color', barColor, 'important');
+    this.shippingFillEl.style.minWidth = '8px';
+
     var trackEl = this.shippingSection.querySelector('.tb-free-shipping-track');
     if (trackEl) {
       trackEl.style.backgroundColor = trackColor;
@@ -728,7 +735,9 @@
       this.shippingSection.classList.remove('tb-is-complete');
       var remainingCents = Math.max(0, thresholdCents - priceCents);
       var remainingFormatted = formatMoney(remainingCents);
-      var msg = this.shippingText.replace(/\{?\s*\{?\s*amount\s*\}?\s*\}?/gi, '<strong>' + remainingFormatted + '</strong>');
+      // Cleanly replace {amount} while strictly preserving spacing
+      var rawTpl = this.drawer.dataset.freeShippingText || this.shippingText || 'Add {amount} more for FREE Shipping!';
+      var msg = rawTpl.replace(/\{\s*amount\s*\}/gi, '<strong>' + remainingFormatted + '</strong>');
       this.shippingTextEl.innerHTML = msg;
     }
   };

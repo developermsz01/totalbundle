@@ -120,6 +120,7 @@
     data-free-shipping-success-text="{{ shipping_success_text | escape }}"
     data-free-shipping-bar-color="{{ bar_color | escape }}"
     data-free-shipping-bar-bg-color="{{ bar_bg_color | escape }}"
+    data-cart-total="{{ cart.total_price }}"
   >
     <!-- Drawer Header -->
     <header class="tb-drawer-header">
@@ -147,7 +148,7 @@
           {%- endif -%}
         </div>
         <div class="tb-free-shipping-track" style="background-color: {{ bar_bg_color }};">
-          <div class="tb-free-shipping-fill{% if progress_ratio >= 100 %} tb-complete{% endif %}" style="width: {{ progress_ratio }}%; background-color: {{ bar_color }};"></div>
+          <div class="tb-free-shipping-fill{% if progress_ratio >= 100 %} tb-complete{% endif %}" style="width: {{ progress_ratio }}%; min-width: 8px; background-color: {{ bar_color }};"></div>
         </div>
       </div>
     {%- endif -%}
