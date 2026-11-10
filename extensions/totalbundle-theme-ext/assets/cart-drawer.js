@@ -56,12 +56,16 @@
     this.noteTextarea = this.drawer.querySelector('.tb-drawer-note-textarea');
     this.noteToggle = this.drawer.querySelector('.tb-drawer-note-toggle');
 
+    // Internal flags to prevent double-fire
+    this._tbInternalCartOp = false; // true while WE are doing a cart op
+    this._tbAddonAdding = false;    // true while addon add is in-flight
+
     // Run active suppression and setup interceptors
     this.suppressThemeDrawer();
     this.hijackThemeProductForms();
     this.initThemeInterceptors();
     this.initEvents();
-    this.refresh();
+    // Do NOT call this.refresh() here — interceptors will catch first open
   }
 
   /**
@@ -216,15 +220,20 @@
       } catch (obsErr) {}
     }
 
-    // 2. Monkey-patch window.fetch for /cart/add and /cart/add.js
+    // 2. Monkey-patch window.fetch for /cart/add and /cart/add.js ONLY
+    // Skip if the request is our own internal cart op
     if (window.fetch) {
       var origFetch = window.fetch;
       window.fetch = function (resource, init) {
         var urlStr = typeof resource === 'string' ? resource : (resource && resource.url ? resource.url : '');
-        var isCartAdd = urlStr && (urlStr.indexOf('/cart/add') !== -1 || urlStr.indexOf('/cart/add.js') !== -1);
+        // Only intercept /cart/add — NOT /cart/add.js from our own addon btn, NOT /cart/change, NOT /cart.js
+        var isExternalCartAdd = urlStr &&
+          (urlStr.indexOf('/cart/add') !== -1 || urlStr.indexOf('/cart/add.js') !== -1) &&
+          !self._tbInternalCartOp &&
+          !self._tbAddonAdding;
 
         return origFetch.apply(this, arguments).then(function (response) {
-          if (isCartAdd && response.ok) {
+          if (isExternalCartAdd && response.ok) {
             setTimeout(function () {
               self.suppressThemeDrawer();
               self.openAndRefresh();
@@ -235,7 +244,7 @@
       };
     }
 
-    // 3. Monkey-patch XMLHttpRequest for /cart/add
+    // 3. Monkey-patch XMLHttpRequest for /cart/add — but skip our own internal ops
     if (window.XMLHttpRequest) {
       var origOpen = XMLHttpRequest.prototype.open;
       var origSend = XMLHttpRequest.prototype.send;
@@ -247,7 +256,10 @@
 
       XMLHttpRequest.prototype.send = function () {
         var xhr = this;
-        if (xhr._tbUrl && (xhr._tbUrl.indexOf('/cart/add') !== -1 || xhr._tbUrl.indexOf('/cart/add.js') !== -1)) {
+        if (xhr._tbUrl &&
+            (xhr._tbUrl.indexOf('/cart/add') !== -1 || xhr._tbUrl.indexOf('/cart/add.js') !== -1) &&
+            !self._tbInternalCartOp &&
+            !self._tbAddonAdding) {
           xhr.addEventListener('load', function () {
             if (xhr.status >= 200 && xhr.status < 300) {
               setTimeout(function () {
@@ -381,17 +393,16 @@
         e.preventDefault();
         var itemEl = qtyBtn.closest('.tb-cart-item');
         if (!itemEl) return;
-        var lineKey = itemEl.dataset.itemKey;
-        var lineIndex = itemEl.dataset.itemIndex;
+        var lineIndex = parseInt(itemEl.dataset.itemIndex, 10); // 1-based line index
         var input = itemEl.querySelector('.tb-qty-input');
         var currentQty = parseInt(input.value, 10) || 1;
         var action = qtyBtn.dataset.action;
         var newQty = action === 'plus' ? currentQty + 1 : currentQty - 1;
 
         if (newQty <= 0) {
-          self.updateItem(lineKey || lineIndex, 0);
+          self.updateItem(lineIndex, 0);
         } else {
-          self.updateItem(lineKey || lineIndex, newQty);
+          self.updateItem(lineIndex, newQty);
         }
         return;
       }
@@ -402,8 +413,8 @@
         e.preventDefault();
         var itemWrap = removeBtn.closest('.tb-cart-item');
         if (!itemWrap) return;
-        var key = itemWrap.dataset.itemKey || itemWrap.dataset.itemIndex;
-        self.updateItem(key, 0);
+        var lineIdx = parseInt(itemWrap.dataset.itemIndex, 10); // 1-based line index
+        self.updateItem(lineIdx, 0);
         return;
       }
     });
@@ -448,22 +459,30 @@
 
   TotalBundleCartDrawer.prototype.refresh = function () {
     var self = this;
+    // Build cart URL — use Shopify.routes.root for multi-currency compatibility
     var cartUrl = (window.Shopify && window.Shopify.routes && window.Shopify.routes.root
       ? window.Shopify.routes.root + 'cart.js'
       : '/cart.js') + '?_tb=' + Date.now();
 
+    // Mark as internal so the fetch monkey-patch won't re-trigger openAndRefresh
+    self._tbInternalCartOp = true;
     fetch(cartUrl, { headers: { 'Accept': 'application/json' } })
       .then(function (res) { return res.json(); })
       .then(function (cart) {
+        self._tbInternalCartOp = false;
         self.renderCart(cart);
       })
       .catch(function (err) {
+        self._tbInternalCartOp = false;
         console.warn('[TotalBundle] Failed to fetch cart:', err);
       });
   };
 
-  TotalBundleCartDrawer.prototype.updateItem = function (idOrKey, quantity) {
+  TotalBundleCartDrawer.prototype.updateItem = function (lineIndex, quantity) {
     var self = this;
+    // Use 'line' (1-based index) NOT 'id' (variant id) so we target the EXACT line item,
+    // not ALL items with the same variant.
+    self._tbInternalCartOp = true;
     fetch('/cart/change.js', {
       method: 'POST',
       headers: {
@@ -471,21 +490,26 @@
         'Accept': 'application/json',
       },
       body: JSON.stringify({
-        id: idOrKey,
+        line: parseInt(lineIndex, 10),
         quantity: quantity,
       }),
     })
       .then(function (res) { return res.json(); })
       .then(function (cart) {
+        self._tbInternalCartOp = false;
         self.renderCart(cart);
       })
       .catch(function (err) {
+        self._tbInternalCartOp = false;
         console.error('[TotalBundle] Failed to update item:', err);
       });
   };
 
   TotalBundleCartDrawer.prototype.handleAddon = function (button, variantId, customTitle, customPrice) {
     var self = this;
+    // Prevent double-click / double-add
+    if (button.classList.contains('tb-loading')) return;
+
     button.classList.add('tb-loading');
     var originalText = button.textContent;
     button.textContent = '...';
@@ -512,6 +536,10 @@
       ? window.Shopify.routes.root + 'cart/add.js'
       : '/cart/add.js';
 
+    // Set flag so fetch monkey-patch skips this internal add request
+    self._tbAddonAdding = true;
+    self._tbInternalCartOp = true;
+
     fetch(addUrl, {
       method: 'POST',
       headers: {
@@ -521,6 +549,8 @@
       body: JSON.stringify(payload),
     })
       .then(function (res) {
+        self._tbAddonAdding = false;
+        self._tbInternalCartOp = false;
         if (!res.ok) {
           return res.json().then(function (err) { throw err; });
         }
@@ -532,9 +562,12 @@
         setTimeout(function () {
           button.textContent = originalText;
         }, 1500);
+        // Refresh cart display once — no second trigger from monkey-patch
         self.refresh();
       })
       .catch(function (err) {
+        self._tbAddonAdding = false;
+        self._tbInternalCartOp = false;
         button.classList.remove('tb-loading');
         button.textContent = originalText;
         console.warn('[TotalBundle] Addon add error:', err);
@@ -632,12 +665,18 @@
   };
 
   TotalBundleCartDrawer.prototype.updateFreeShippingBar = function (totalPriceCents) {
+    // Re-query in case DOM was updated after init (drawer rendered async)
+    if (!this.shippingSection) this.shippingSection = this.drawer.querySelector('.tb-free-shipping-section');
+    if (!this.shippingFillEl) this.shippingFillEl = this.drawer.querySelector('.tb-free-shipping-fill');
+    if (!this.shippingTextEl) this.shippingTextEl = this.drawer.querySelector('.tb-free-shipping-text');
+
     if (!this.shippingSection || !this.shippingFillEl || !this.shippingTextEl) return;
 
     var thresholdCents = this.threshold * 100;
     if (thresholdCents <= 0) thresholdCents = 5000;
 
-    var percentage = Math.min(100, Math.max(0, Math.round((totalPriceCents / thresholdCents) * 100)));
+    var priceCents = typeof totalPriceCents === 'number' ? totalPriceCents : parseInt(totalPriceCents, 10) || 0;
+    var percentage = Math.min(100, Math.max(0, Math.round((priceCents / thresholdCents) * 100)));
 
     // Animate fill bar width from 0% up to 100% complete
     this.shippingFillEl.style.width = percentage + '%';
@@ -649,7 +688,7 @@
     } else {
       this.shippingFillEl.classList.remove('tb-complete');
       this.shippingSection.classList.remove('tb-is-complete');
-      var remainingCents = Math.max(0, thresholdCents - totalPriceCents);
+      var remainingCents = Math.max(0, thresholdCents - priceCents);
       var remainingFormatted = formatMoney(remainingCents);
       var msg = this.shippingText.replace(/\{?\s*\{?\s*amount\s*\}?\s*\}?/gi, '<strong>' + remainingFormatted + '</strong>');
       this.shippingTextEl.innerHTML = msg;

@@ -75,3 +75,4 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     return json({ success: false, products: [], error: String(error?.message || error) }, { status: 500 });
   }
 };
+
