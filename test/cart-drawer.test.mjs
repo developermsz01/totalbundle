@@ -130,7 +130,10 @@ describe('Cart Drawer Storefront Theme App Extension Structure', () => {
     assert.ok(content.includes('/cart/add.js'), 'Must add addons via /cart/add.js');
     assert.ok(content.includes('totalbundle:open-cart-drawer'), 'Must listen to open drawer event');
     assert.ok(content.includes('suppressThemeDrawer'), 'Must have suppressThemeDrawer method');
+    assert.ok(content.includes('hijackThemeProductForms'), 'Must hijack Dawn product forms');
+    assert.ok(content.includes('proxyCart'), 'Must provide proxy cart to stop /cart redirect');
     assert.ok(content.includes('MutationObserver'), 'Must have MutationObserver to prevent theme drawer flashes');
+    assert.ok(content.includes('stopImmediatePropagation'), 'Must stop theme bubble listeners');
   });
 
   it('blocks/sticky-cart-embed.liquid renders cart-drawer-component to ensure drawer is loaded globally', () => {

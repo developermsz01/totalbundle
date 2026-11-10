@@ -318,9 +318,9 @@
       'click',
       function (e) {
         var target = e.target.closest(
-          'a[href="/cart"], a[href^="/cart?"], #cart-icon-bubble, .header__icon--cart, [data-cart-drawer-trigger], .js-drawer-open-cart, .cart-icon-bubble, [data-ajax-cart-trigger], .cart-link'
+          'a[href$="/cart"], a[href*="/cart?"], a[href*="/cart#"], #cart-icon-bubble, .header__icon--cart, [data-cart-drawer-trigger], .js-drawer-open-cart, .cart-icon-bubble, [data-ajax-cart-trigger], .cart-link'
         );
-        if (target && !e.defaultPrevented) {
+        if (target && !target.closest('.tb-cart-drawer') && !e.defaultPrevented) {
           e.preventDefault();
           e.stopPropagation();
           e.stopImmediatePropagation(); // Stops theme listener from running
