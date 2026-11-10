@@ -3,6 +3,39 @@
  * Fully responsive slide-out cart with Free Shipping Bar, Product Add-ons, and Theme Font inheritance.
  */
 
+/* ======================================================== */
+/* AUTOMATIC THEME DRAWER & POPUP SUPPRESSION               */
+/* Automatically stops Dawn, Prestige, Sense, Debut, etc.  */
+/* ======================================================== */
+cart-drawer,
+cart-notification,
+#CartDrawer,
+.cart-drawer:not(.tb-cart-drawer),
+.drawer--cart,
+#sidebar-cart,
+.ajaxcart__drawer,
+.mini-cart,
+.js-drawer-open-right,
+[data-cart-drawer]:not(.tb-cart-drawer),
+.cart-notification,
+.cart-popup-wrapper,
+#CartPopup,
+.drawer--right:not(.tb-cart-drawer),
+.cart-drawer-container:not(.tb-cart-drawer) {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  opacity: 0 !important;
+  transform: none !important;
+}
+
+cart-drawer.active ~ .cart-drawer-backdrop,
+.cart-drawer-backdrop:not(.tb-cart-drawer-backdrop),
+.drawer__backdrop:not(.tb-cart-drawer-backdrop),
+.js-drawer-open-right::after {
+  display: none !important;
+}
+
 :root {
   --tb-drawer-bg: #ffffff;
   --tb-drawer-text: #121212;

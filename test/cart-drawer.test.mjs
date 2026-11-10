@@ -107,7 +107,7 @@ describe('Cart Drawer Storefront Theme App Extension Structure', () => {
     assert.ok(content.includes('app.metafields.cart_drawer.settings.value'), 'Must read cart_drawer metafield');
   });
 
-  it('assets/cart-drawer.css contains responsive and theme font styles', () => {
+  it('assets/cart-drawer.css contains responsive styles and suppresses native theme drawers', () => {
     const filePath = path.join(rootDir, 'extensions/totalbundle-theme-ext/assets/cart-drawer.css');
     assert.ok(fs.existsSync(filePath), 'cart-drawer.css must exist');
 
@@ -116,9 +116,11 @@ describe('Cart Drawer Storefront Theme App Extension Structure', () => {
     assert.ok(content.includes('var(--font-heading-family'), 'Must inherit theme heading font');
     assert.ok(content.includes('@media (max-width: 640px)'), 'Must include mobile responsive rules');
     assert.ok(content.includes('.tb-cart-drawer'), 'Must define cart drawer class');
+    assert.ok(content.includes('cart-drawer'), 'Must suppress theme cart-drawer');
+    assert.ok(content.includes('cart-notification'), 'Must suppress theme cart-notification');
   });
 
-  it('assets/cart-drawer.js contains ajax cart and free shipping calculation logic', () => {
+  it('assets/cart-drawer.js contains ajax cart, free shipping, and theme drawer suppressors', () => {
     const filePath = path.join(rootDir, 'extensions/totalbundle-theme-ext/assets/cart-drawer.js');
     assert.ok(fs.existsSync(filePath), 'cart-drawer.js must exist');
 
@@ -127,6 +129,14 @@ describe('Cart Drawer Storefront Theme App Extension Structure', () => {
     assert.ok(content.includes('/cart/change.js'), 'Must update items via /cart/change.js');
     assert.ok(content.includes('/cart/add.js'), 'Must add addons via /cart/add.js');
     assert.ok(content.includes('totalbundle:open-cart-drawer'), 'Must listen to open drawer event');
+    assert.ok(content.includes('suppressThemeDrawer'), 'Must have suppressThemeDrawer method');
+    assert.ok(content.includes('MutationObserver'), 'Must have MutationObserver to prevent theme drawer flashes');
+  });
+
+  it('blocks/sticky-cart-embed.liquid renders cart-drawer-component to ensure drawer is loaded globally', () => {
+    const filePath = path.join(rootDir, 'extensions/totalbundle-theme-ext/blocks/sticky-cart-embed.liquid');
+    const content = fs.readFileSync(filePath, 'utf8');
+    assert.ok(content.includes('{% render \'cart-drawer-component\''), 'Must render cart-drawer-component in main embed');
   });
 
   it('app/routes/api.cart-drawer-settings.ts exists for public API', () => {

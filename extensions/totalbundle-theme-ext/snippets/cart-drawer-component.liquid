@@ -86,6 +86,9 @@
 -%}
 
 {%- if is_enabled -%}
+  {{ 'cart-drawer.css' | asset_url | stylesheet_tag }}
+  <script src="{{ 'cart-drawer.js' | asset_url }}" defer="defer"></script>
+
   <style>
     #tb-cart-drawer-{{ block.id }} {
       --tb-drawer-bg: {{ bg_color }};

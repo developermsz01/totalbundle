@@ -1,6 +1,7 @@
 /**
  * TotalBundle Cart Drawer JavaScript
- * Slide-out Ajax cart with Free Shipping Bar & Product Addon functionality.
+ * Slide-out Ajax cart with Free Shipping Bar, Product Add-on functionality,
+ * and automatic Theme Drawer & Cart Notification suppression.
  */
 
 (function () {
@@ -9,7 +10,6 @@
   function formatMoney(cents) {
     if (typeof cents !== 'number') cents = parseInt(cents, 10) || 0;
     var dollars = (cents / 100).toFixed(2);
-    // Use Shopify window format if available
     if (window.Shopify && typeof window.Shopify.formatMoney === 'function') {
       try {
         return window.Shopify.formatMoney(cents);
@@ -19,6 +19,20 @@
   }
 
   function TotalBundleCartDrawer() {
+    // Handle DOM deduplication if rendered multiple times
+    var allDrawers = document.querySelectorAll('.tb-cart-drawer');
+    if (allDrawers.length > 1) {
+      for (var d = 1; d < allDrawers.length; d++) {
+        allDrawers[d].remove();
+      }
+    }
+    var allBackdrops = document.querySelectorAll('.tb-cart-drawer-backdrop');
+    if (allBackdrops.length > 1) {
+      for (var b = 1; b < allBackdrops.length; b++) {
+        allBackdrops[b].remove();
+      }
+    }
+
     this.drawer = document.querySelector('.tb-cart-drawer');
     this.backdrop = document.querySelector('.tb-cart-drawer-backdrop');
     if (!this.drawer || !this.backdrop) return;
@@ -38,8 +52,150 @@
     this.noteTextarea = this.drawer.querySelector('.tb-drawer-note-textarea');
     this.noteToggle = this.drawer.querySelector('.tb-drawer-note-toggle');
 
+    this.suppressThemeDrawer();
+    this.initThemeInterceptors();
     this.initEvents();
   }
+
+  /**
+   * Completely suppress & close all native theme drawers, popups, and notifications
+   * (e.g. Dawn, Prestige, Sense, Impulse, Debut, etc.)
+   */
+  TotalBundleCartDrawer.prototype.suppressThemeDrawer = function () {
+    var themeElements = document.querySelectorAll(
+      'cart-drawer, cart-notification, [data-cart-drawer]:not(.tb-cart-drawer), #CartDrawer, .cart-drawer:not(.tb-cart-drawer), .drawer--cart, #sidebar-cart, .ajaxcart__drawer, .mini-cart, .cart-popup-wrapper, #CartPopup, .cart-notification'
+    );
+
+    themeElements.forEach(function (el) {
+      el.classList.remove('active', 'animate', 'is-open');
+      if (el.hasAttribute('open')) el.removeAttribute('open');
+      if (typeof el.close === 'function') {
+        try { el.close(); } catch (e) {}
+      }
+      el.style.setProperty('display', 'none', 'important');
+      el.style.setProperty('visibility', 'hidden', 'important');
+      el.style.setProperty('opacity', '0', 'important');
+      el.style.setProperty('pointer-events', 'none', 'important');
+    });
+
+    // Remove any theme backdrops or overlays
+    var themeBackdrops = document.querySelectorAll(
+      '.cart-drawer-backdrop, .drawer__backdrop, .modal__backdrop, .js-drawer-open-right'
+    );
+    themeBackdrops.forEach(function (bd) {
+      if (!bd.classList.contains('tb-cart-drawer-backdrop')) {
+        bd.classList.remove('is-active', 'active');
+        bd.style.setProperty('display', 'none', 'important');
+      }
+    });
+
+    // Reset overflow on document/body that themes lock
+    document.documentElement.classList.remove('overflow-hidden');
+    document.body.classList.remove('overflow-hidden');
+  };
+
+  /**
+   * Setup active listeners and monkey-patches to stop theme drawers from opening
+   */
+  TotalBundleCartDrawer.prototype.initThemeInterceptors = function () {
+    var self = this;
+
+    // 1. MutationObserver to catch theme drawer or notification activations immediately
+    if (window.MutationObserver) {
+      var observer = new MutationObserver(function () {
+        var activeThemes = document.querySelectorAll(
+          'cart-drawer.active, cart-notification.active, [data-cart-drawer].active, cart-drawer[open], .cart-popup-wrapper.active, .cart-notification.active'
+        );
+        if (activeThemes.length > 0) {
+          self.suppressThemeDrawer();
+          if (!self.isOpen()) {
+            self.openAndRefresh();
+          }
+        }
+      });
+
+      try {
+        observer.observe(document.documentElement, {
+          attributes: true,
+          subtree: true,
+          attributeFilter: ['class', 'open'],
+        });
+      } catch (obsErr) {}
+    }
+
+    // 2. Monkey-patch window.fetch for /cart/add and /cart/add.js
+    if (window.fetch) {
+      var origFetch = window.fetch;
+      window.fetch = function (resource, init) {
+        var urlStr = typeof resource === 'string' ? resource : (resource && resource.url ? resource.url : '');
+        var isCartAdd = urlStr && (urlStr.indexOf('/cart/add') !== -1 || urlStr.indexOf('/cart/add.js') !== -1);
+
+        return origFetch.apply(this, arguments).then(function (response) {
+          if (isCartAdd && response.ok) {
+            setTimeout(function () {
+              self.suppressThemeDrawer();
+              self.openAndRefresh();
+            }, 60);
+          }
+          return response;
+        });
+      };
+    }
+
+    // 3. Monkey-patch XMLHttpRequest for /cart/add
+    if (window.XMLHttpRequest) {
+      var origOpen = XMLHttpRequest.prototype.open;
+      var origSend = XMLHttpRequest.prototype.send;
+
+      XMLHttpRequest.prototype.open = function (method, url) {
+        this._tbUrl = url;
+        return origOpen.apply(this, arguments);
+      };
+
+      XMLHttpRequest.prototype.send = function () {
+        var xhr = this;
+        if (xhr._tbUrl && (xhr._tbUrl.indexOf('/cart/add') !== -1 || xhr._tbUrl.indexOf('/cart/add.js') !== -1)) {
+          xhr.addEventListener('load', function () {
+            if (xhr.status >= 200 && xhr.status < 300) {
+              setTimeout(function () {
+                self.suppressThemeDrawer();
+                self.openAndRefresh();
+              }, 60);
+            }
+          });
+        }
+        return origSend.apply(this, arguments);
+      };
+    }
+
+    // 4. Override Dawn customElements if registered
+    function patchCustomElements() {
+      var dawnDrawer = document.querySelector('cart-drawer');
+      if (dawnDrawer) {
+        dawnDrawer.open = function () {
+          self.suppressThemeDrawer();
+          self.openAndRefresh();
+        };
+        dawnDrawer.renderContents = function () {
+          self.suppressThemeDrawer();
+          self.openAndRefresh();
+        };
+      }
+      var dawnNotif = document.querySelector('cart-notification');
+      if (dawnNotif) {
+        dawnNotif.open = function () {
+          self.suppressThemeDrawer();
+          self.openAndRefresh();
+        };
+        dawnNotif.renderContents = function () {
+          self.suppressThemeDrawer();
+          self.openAndRefresh();
+        };
+      }
+    }
+    patchCustomElements();
+    setTimeout(patchCustomElements, 1000);
+  };
 
   TotalBundleCartDrawer.prototype.initEvents = function () {
     var self = this;
@@ -81,14 +237,54 @@
       });
     }
 
-    // Intercept clicks on cart links
-    document.addEventListener('click', function (e) {
-      var target = e.target.closest('a[href="/cart"], a[href^="/cart?"], [data-cart-drawer-trigger], .js-drawer-open-cart, .cart-icon-bubble');
-      if (target && !e.defaultPrevented) {
-        e.preventDefault();
-        self.openAndRefresh();
-      }
-    });
+    // Capture-phase click interceptor on cart links & icons
+    document.addEventListener(
+      'click',
+      function (e) {
+        var target = e.target.closest(
+          'a[href="/cart"], a[href^="/cart?"], #cart-icon-bubble, .header__icon--cart, [data-cart-drawer-trigger], .js-drawer-open-cart, .cart-icon-bubble, [data-ajax-cart-trigger], .cart-link'
+        );
+        if (target && !e.defaultPrevented) {
+          e.preventDefault();
+          e.stopPropagation();
+          e.stopImmediatePropagation(); // Stops theme listener from running
+          self.suppressThemeDrawer();
+          self.openAndRefresh();
+        }
+      },
+      true // Capture phase
+    );
+
+    // Capture-phase form submit interceptor for Add to Cart
+    document.addEventListener(
+      'submit',
+      function (e) {
+        var form = e.target;
+        if (form && form.action && form.action.indexOf('/cart/add') !== -1) {
+          // If theme form is standard submit (or page redirect), intercept and ajax add
+          e.preventDefault();
+          e.stopPropagation();
+          e.stopImmediatePropagation();
+
+          var formData = new FormData(form);
+          fetch('/cart/add.js', {
+            method: 'POST',
+            body: formData,
+            headers: { 'Accept': 'application/json' },
+          })
+            .then(function (res) { return res.json(); })
+            .then(function () {
+              self.suppressThemeDrawer();
+              self.openAndRefresh();
+            })
+            .catch(function () {
+              self.suppressThemeDrawer();
+              self.openAndRefresh();
+            });
+        }
+      },
+      true // Capture phase
+    );
 
     // Addon button clicks (Event delegation)
     this.drawer.addEventListener('click', function (e) {
@@ -137,6 +333,7 @@
 
     // Global custom events
     window.addEventListener('totalbundle:open-cart-drawer', function () {
+      self.suppressThemeDrawer();
       self.openAndRefresh();
     });
 
@@ -144,15 +341,9 @@
       self.close();
     });
 
-    // Intercept AJAX form add-to-cart across themes
-    document.addEventListener('submit', function (e) {
-      var form = e.target;
-      if (form && form.action && form.action.indexOf('/cart/add') !== -1) {
-        // If form doesn't prevent default, listen for fetch or open after slight delay
-        setTimeout(function () {
-          self.openAndRefresh();
-        }, 500);
-      }
+    // Custom standard shopify events
+    document.addEventListener('cart:updated', function () {
+      self.suppressThemeDrawer();
     });
   };
 
@@ -161,6 +352,7 @@
   };
 
   TotalBundleCartDrawer.prototype.open = function () {
+    this.suppressThemeDrawer();
     this.drawer.classList.add('tb-open');
     this.backdrop.classList.add('tb-open');
     document.body.style.overflow = 'hidden';
@@ -221,7 +413,6 @@
     if (variantId) {
       payload = { id: variantId, quantity: 1 };
     } else {
-      // If variantId is not set, add as custom line item or first available
       payload = {
         items: [
           {
@@ -370,12 +561,13 @@
   };
 
   // Auto initialize
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', function () {
-      window.totalBundleCartDrawer = new TotalBundleCartDrawer();
-    });
-  } else {
+  function initTotalBundleDrawer() {
     window.totalBundleCartDrawer = new TotalBundleCartDrawer();
   }
-})();
 
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initTotalBundleDrawer);
+  } else {
+    initTotalBundleDrawer();
+  }
+})();
