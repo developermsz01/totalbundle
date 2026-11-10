@@ -220,17 +220,15 @@
       } catch (obsErr) {}
     }
 
-    // 2. Monkey-patch window.fetch for /cart/add and /cart/add.js ONLY
-    // Skip if the request is our own internal cart op
+    // 2. Monkey-patch window.fetch — ONLY intercept EXTERNAL /cart/add calls
+    // Must NOT intercept: /cart.js, /cart/change.js, /cart/update.js, our own addon adds
     if (window.fetch) {
       var origFetch = window.fetch;
       window.fetch = function (resource, init) {
         var urlStr = typeof resource === 'string' ? resource : (resource && resource.url ? resource.url : '');
-        // Only intercept /cart/add — NOT /cart/add.js from our own addon btn, NOT /cart/change, NOT /cart.js
-        var isExternalCartAdd = urlStr &&
-          (urlStr.indexOf('/cart/add') !== -1 || urlStr.indexOf('/cart/add.js') !== -1) &&
-          !self._tbInternalCartOp &&
-          !self._tbAddonAdding;
+        // Match /cart/add or /cart/add.js ONLY (not /cart/change, /cart/update, /cart.js)
+        var isCartAddUrl = urlStr && /\/cart\/add(\.js)?(\?|$|\/|#)/.test(urlStr);
+        var isExternalCartAdd = isCartAddUrl && !self._tbInternalCartOp && !self._tbAddonAdding;
 
         return origFetch.apply(this, arguments).then(function (response) {
           if (isExternalCartAdd && response.ok) {
@@ -244,7 +242,7 @@
       };
     }
 
-    // 3. Monkey-patch XMLHttpRequest for /cart/add — but skip our own internal ops
+    // 3. Monkey-patch XMLHttpRequest — ONLY intercept external /cart/add calls
     if (window.XMLHttpRequest) {
       var origOpen = XMLHttpRequest.prototype.open;
       var origSend = XMLHttpRequest.prototype.send;
@@ -256,10 +254,8 @@
 
       XMLHttpRequest.prototype.send = function () {
         var xhr = this;
-        if (xhr._tbUrl &&
-            (xhr._tbUrl.indexOf('/cart/add') !== -1 || xhr._tbUrl.indexOf('/cart/add.js') !== -1) &&
-            !self._tbInternalCartOp &&
-            !self._tbAddonAdding) {
+        var isCartAddUrl = xhr._tbUrl && /\/cart\/add(\.js)?(\?|$|\/|#)/.test(xhr._tbUrl);
+        if (isCartAddUrl && !self._tbInternalCartOp && !self._tbAddonAdding) {
           xhr.addEventListener('load', function () {
             if (xhr.status >= 200 && xhr.status < 300) {
               setTimeout(function () {
@@ -393,17 +389,12 @@
         e.preventDefault();
         var itemEl = qtyBtn.closest('.tb-cart-item');
         if (!itemEl) return;
-        var lineIndex = parseInt(itemEl.dataset.itemIndex, 10); // 1-based line index
+        var itemKey = itemEl.dataset.itemKey; // cart line key e.g. "40234:abc"
         var input = itemEl.querySelector('.tb-qty-input');
         var currentQty = parseInt(input.value, 10) || 1;
         var action = qtyBtn.dataset.action;
-        var newQty = action === 'plus' ? currentQty + 1 : currentQty - 1;
-
-        if (newQty <= 0) {
-          self.updateItem(lineIndex, 0);
-        } else {
-          self.updateItem(lineIndex, newQty);
-        }
+        var newQty = action === 'plus' ? currentQty + 1 : Math.max(0, currentQty - 1);
+        self.updateItem(itemKey, newQty);
         return;
       }
 
@@ -413,8 +404,8 @@
         e.preventDefault();
         var itemWrap = removeBtn.closest('.tb-cart-item');
         if (!itemWrap) return;
-        var lineIdx = parseInt(itemWrap.dataset.itemIndex, 10); // 1-based line index
-        self.updateItem(lineIdx, 0);
+        var removeKey = itemWrap.dataset.itemKey; // cart line key
+        self.updateItem(removeKey, 0);
         return;
       }
     });
@@ -478,10 +469,15 @@
       });
   };
 
-  TotalBundleCartDrawer.prototype.updateItem = function (lineIndex, quantity) {
+  TotalBundleCartDrawer.prototype.updateItem = function (itemKey, quantity) {
     var self = this;
-    // Use 'line' (1-based index) NOT 'id' (variant id) so we target the EXACT line item,
-    // not ALL items with the same variant.
+    // IMPORTANT: use 'id' with the cart line KEY (e.g. "40234567890:abc123")
+    // NOT 'line' (1-based index which shifts on removal)
+    // NOT variant id alone (which removes ALL lines with that variant)
+    if (!itemKey) {
+      console.error('[TotalBundle] updateItem called with empty key');
+      return;
+    }
     self._tbInternalCartOp = true;
     fetch('/cart/change.js', {
       method: 'POST',
@@ -490,8 +486,8 @@
         'Accept': 'application/json',
       },
       body: JSON.stringify({
-        line: parseInt(lineIndex, 10),
-        quantity: quantity,
+        id: String(itemKey),
+        quantity: parseInt(quantity, 10),
       }),
     })
       .then(function (res) { return res.json(); })
