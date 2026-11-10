@@ -23,7 +23,7 @@ describe('Theme App Extension Structure & Configuration', () => {
     assert.ok(json.sticky_cart.quantity);
   });
 
-  it('blocks/sticky-cart-embed.liquid exists and has valid schema', () => {
+  it('blocks/sticky-cart-embed.liquid exists and has valid schema with customizer clutter removed', () => {
     const embedPath = path.join(EXTENSION_DIR, 'blocks/sticky-cart-embed.liquid');
     assert.ok(fs.existsSync(embedPath), 'sticky-cart-embed.liquid must exist');
     const content = fs.readFileSync(embedPath, 'utf8');
@@ -35,16 +35,8 @@ describe('Theme App Extension Structure & Configuration', () => {
     assert.equal(schema.target, 'body');
     assert.equal(schema.name, 'Sticky Add to Cart');
     assert.ok(Array.isArray(schema.settings));
-
-    const settingIds = schema.settings.map((s) => s.id).filter(Boolean);
-    assert.ok(settingIds.includes('position'), 'Must include position setting');
-    assert.ok(settingIds.includes('desktop_visibility'), 'Must include desktop_visibility setting');
-    assert.ok(settingIds.includes('show_on_mobile'), 'Must include show_on_mobile setting');
-    assert.ok(settingIds.includes('bg_color'), 'Must include bg_color setting');
-    assert.ok(settingIds.includes('button_bg_color'), 'Must include button_bg_color setting');
-    assert.ok(settingIds.includes('button_text'), 'Must include button_text setting');
-    assert.ok(settingIds.includes('border_radius'), 'Must include border_radius setting');
-    assert.ok(settingIds.includes('padding'), 'Must include padding setting');
+    // All settings are handled directly in the in-app dashboard
+    assert.equal(schema.settings.length, 0);
   });
 
   it('blocks/sticky-cart-block.liquid exists and has valid schema', () => {

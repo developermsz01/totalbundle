@@ -75,7 +75,7 @@ describe('Cart Drawer Settings & Backend Separation', () => {
 });
 
 describe('Cart Drawer Storefront Theme App Extension Structure', () => {
-  it('blocks/cart-drawer-embed.liquid exists and has valid schema with labels <= 50 chars', () => {
+  it('blocks/cart-drawer-embed.liquid exists and has clean schema with settings managed via app', () => {
     const filePath = path.join(rootDir, 'extensions/totalbundle-theme-ext/blocks/cart-drawer-embed.liquid');
     assert.ok(fs.existsSync(filePath), 'cart-drawer-embed.liquid must exist');
 
@@ -90,30 +90,8 @@ describe('Cart Drawer Storefront Theme App Extension Structure', () => {
     assert.equal(schema.target, 'body');
     assert.equal(schema.javascript, 'cart-drawer.js');
     assert.equal(schema.stylesheet, 'cart-drawer.css');
-
-    // Validate all labels and content <= 50 characters (Shopify constraint)
-    for (const setting of schema.settings || []) {
-      if (setting.content) {
-        assert.ok(
-          setting.content.length <= 50,
-          `Header content "${setting.content}" exceeds 50 chars (${setting.content.length})`
-        );
-      }
-      if (setting.label) {
-        assert.ok(
-          setting.label.length <= 50,
-          `Label "${setting.label}" exceeds 50 chars (${setting.label.length})`
-        );
-      }
-      if (setting.options) {
-        for (const opt of setting.options) {
-          assert.ok(
-            opt.label.length <= 50,
-            `Option label "${opt.label}" exceeds 50 chars (${opt.label.length})`
-          );
-        }
-      }
-    }
+    assert.ok(Array.isArray(schema.settings));
+    assert.equal(schema.settings.length, 0);
   });
 
   it('snippets/cart-drawer-component.liquid renders free shipping bar, addons, and theme styles', () => {
