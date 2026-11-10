@@ -136,10 +136,14 @@ describe('Cart Drawer Storefront Theme App Extension Structure', () => {
     assert.ok(content.includes('stopImmediatePropagation'), 'Must stop theme bubble listeners');
   });
 
-  it('blocks/sticky-cart-embed.liquid renders cart-drawer-component to ensure drawer is loaded globally', () => {
-    const filePath = path.join(rootDir, 'extensions/totalbundle-theme-ext/blocks/sticky-cart-embed.liquid');
-    const content = fs.readFileSync(filePath, 'utf8');
-    assert.ok(content.includes('{% render \'cart-drawer-component\''), 'Must render cart-drawer-component in main embed');
+  it('blocks/sticky-cart-embed.liquid and cart-drawer-embed.liquid are cleanly separated without customizer clutter', () => {
+    const stickyFile = path.join(rootDir, 'extensions/totalbundle-theme-ext/blocks/sticky-cart-embed.liquid');
+    const stickyContent = fs.readFileSync(stickyFile, 'utf8');
+    assert.ok(stickyContent.includes('{% render \'sticky-cart-component\''), 'Must render sticky-cart-component');
+
+    const drawerFile = path.join(rootDir, 'extensions/totalbundle-theme-ext/blocks/cart-drawer-embed.liquid');
+    const drawerContent = fs.readFileSync(drawerFile, 'utf8');
+    assert.ok(drawerContent.includes('{% render \'cart-drawer-component\''), 'Must render cart-drawer-component');
   });
 
   it('app/routes/api.cart-drawer-settings.ts exists for public API', () => {
