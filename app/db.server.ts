@@ -4,6 +4,7 @@ declare global {
   var prismaGlobal: PrismaClient | undefined;
   var __memoryBundles: any[] | undefined;
   var __memoryStickyCartSettings: Map<string, StickyCartSettings> | undefined;
+  var __memoryCartDrawerSettings: Map<string, CartDrawerSettings> | undefined;
 }
 
 export interface StickyCartSettings {
@@ -27,6 +28,62 @@ export interface StickyCartSettings {
   padding: number;
 }
 
+export interface CartDrawerAddon {
+  id: string;
+  title: string;
+  price: string;
+  compareAtPrice?: string;
+  image: string;
+  variantId?: string;
+}
+
+export interface CartDrawerSettings {
+  enabled: boolean;
+  // Free Shipping Bar
+  freeShippingEnabled: boolean;
+  freeShippingThreshold: number;
+  freeShippingText: string;
+  freeShippingSuccessText: string;
+  freeShippingBarColor: string;
+  freeShippingBarBgColor: string;
+
+  // Product Add-on / Upsells
+  addonEnabled: boolean;
+  addonHeading: string;
+  addonItems: CartDrawerAddon[];
+  addonButtonText: string;
+
+  // Drawer Content & Flow
+  showCartNote: boolean;
+  cartNotePlaceholder: string;
+  showDiscountField: boolean;
+  showEstimatedTaxShipping: boolean;
+  checkoutButtonText: string;
+  viewCartButtonText: string;
+  showViewCartButton: boolean;
+  emptyCartText: string;
+  emptyCartButtonText: string;
+  emptyCartButtonUrl: string;
+
+  // Theme Font & Styling
+  inheritThemeStyling: boolean;
+  fontFamily: string;
+  baseFontSize: number;
+  headingFontSize: number;
+  bgColor: string;
+  textColor: string;
+  mutedTextColor: string;
+  borderColor: string;
+  checkoutButtonBgColor: string;
+  checkoutButtonTextColor: string;
+  checkoutButtonHoverBgColor: string;
+  addonButtonBgColor: string;
+  addonButtonTextColor: string;
+  borderRadius: number;
+  drawerPosition: "right" | "left";
+  drawerWidth: number;
+}
+
 export const defaultStickyCartSettings: StickyCartSettings = {
   enabled: true,
   position: "bottom",
@@ -48,8 +105,71 @@ export const defaultStickyCartSettings: StickyCartSettings = {
   padding: 12,
 };
 
+export const defaultCartDrawerSettings: CartDrawerSettings = {
+  enabled: true,
+  freeShippingEnabled: true,
+  freeShippingThreshold: 50,
+  freeShippingText: "Add {amount} more for FREE Shipping!",
+  freeShippingSuccessText: "🎉 You have unlocked Free Shipping!",
+  freeShippingBarColor: "#008060",
+  freeShippingBarBgColor: "#e4e5e7",
+
+  addonEnabled: true,
+  addonHeading: "Complete your order (Special Add-on)",
+  addonItems: [
+    {
+      id: "addon-1",
+      title: "Eco-Friendly Gift Packaging",
+      price: "$4.99",
+      compareAtPrice: "$8.00",
+      image: "https://cdn.shopify.com/s/files/1/0533/2089/files/placeholder-images-lifestyle-1_small.png",
+      variantId: "",
+    },
+    {
+      id: "addon-2",
+      title: "1-Year Extended Warranty Protection",
+      price: "$9.99",
+      compareAtPrice: "$15.00",
+      image: "https://cdn.shopify.com/s/files/1/0533/2089/files/placeholder-images-lifestyle-2_small.png",
+      variantId: "",
+    },
+  ],
+  addonButtonText: "+ Add",
+
+  showCartNote: true,
+  cartNotePlaceholder: "Special instructions for seller...",
+  showDiscountField: false,
+  showEstimatedTaxShipping: true,
+  checkoutButtonText: "Proceed to Checkout",
+  viewCartButtonText: "View Cart Page",
+  showViewCartButton: true,
+  emptyCartText: "Your cart is currently empty",
+  emptyCartButtonText: "Explore Products",
+  emptyCartButtonUrl: "/collections/all",
+
+  inheritThemeStyling: true,
+  fontFamily: "inherit",
+  baseFontSize: 14,
+  headingFontSize: 18,
+  bgColor: "#ffffff",
+  textColor: "#121212",
+  mutedTextColor: "#6d7175",
+  borderColor: "#e5e7eb",
+  checkoutButtonBgColor: "#121212",
+  checkoutButtonTextColor: "#ffffff",
+  checkoutButtonHoverBgColor: "#2e2e2e",
+  addonButtonBgColor: "#121212",
+  addonButtonTextColor: "#ffffff",
+  borderRadius: 8,
+  drawerPosition: "right",
+  drawerWidth: 420,
+};
+
 const settingsMap = globalThis.__memoryStickyCartSettings || new Map<string, StickyCartSettings>();
 globalThis.__memoryStickyCartSettings = settingsMap;
+
+const cartDrawerSettingsMap = globalThis.__memoryCartDrawerSettings || new Map<string, CartDrawerSettings>();
+globalThis.__memoryCartDrawerSettings = cartDrawerSettingsMap;
 
 export function getStickyCartSettings(shop: string): StickyCartSettings {
   if (shop && settingsMap.has(shop)) {
@@ -63,6 +183,22 @@ export function saveStickyCartSettings(shop: string, settings: Partial<StickyCar
   const updated: StickyCartSettings = { ...current, ...settings };
   if (shop) {
     settingsMap.set(shop, updated);
+  }
+  return updated;
+}
+
+export function getCartDrawerSettings(shop: string): CartDrawerSettings {
+  if (shop && cartDrawerSettingsMap.has(shop)) {
+    return { ...defaultCartDrawerSettings, ...cartDrawerSettingsMap.get(shop) };
+  }
+  return { ...defaultCartDrawerSettings };
+}
+
+export function saveCartDrawerSettings(shop: string, settings: Partial<CartDrawerSettings>): CartDrawerSettings {
+  const current = getCartDrawerSettings(shop);
+  const updated: CartDrawerSettings = { ...current, ...settings };
+  if (shop) {
+    cartDrawerSettingsMap.set(shop, updated);
   }
   return updated;
 }

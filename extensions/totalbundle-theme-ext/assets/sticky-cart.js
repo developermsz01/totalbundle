@@ -401,6 +401,20 @@
 
     onAddToCartSuccess(itemData) {
       if (this.afterAddAction === 'cart') {
+        if (document.querySelector('.tb-cart-drawer')) {
+          window.dispatchEvent(new CustomEvent('totalbundle:open-cart-drawer'));
+          if (this.btnTextEl) {
+            this.btnTextEl.textContent = 'Added to Cart!';
+          }
+          if (this.addBtn) {
+            this.addBtn.classList.add('tb-sticky-cart__add-btn--success');
+          }
+          setTimeout(() => {
+            if (this.btnTextEl) this.btnTextEl.textContent = this.buttonText;
+            if (this.addBtn) this.addBtn.classList.remove('tb-sticky-cart__add-btn--success');
+          }, 2000);
+          return;
+        }
         window.location.href = '/cart';
         return;
       }

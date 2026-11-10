@@ -1,0 +1,95 @@
+{% comment %}
+  TotalBundle - Cart Drawer App Embed Block
+  Target: body (renders at page root to support slide-out drawer across all store pages)
+{% endcomment %}
+
+{% render 'cart-drawer-component', block: block %}
+
+{% schema %}
+{
+  "name": "Cart Drawer",
+  "target": "body",
+  "javascript": "cart-drawer.js",
+  "stylesheet": "cart-drawer.css",
+  "settings": [
+    {
+      "type": "header",
+      "content": "Drawer Position"
+    },
+    {
+      "type": "select",
+      "id": "drawer_position",
+      "label": "Drawer Position",
+      "options": [
+        { "value": "right", "label": "Slide from Right" },
+        { "value": "left", "label": "Slide from Left" }
+      ],
+      "default": "right"
+    },
+    {
+      "type": "header",
+      "content": "Free Shipping Bar"
+    },
+    {
+      "type": "number",
+      "id": "free_shipping_threshold",
+      "label": "Free Shipping Goal Amount",
+      "default": 50
+    },
+    {
+      "type": "color",
+      "id": "free_shipping_bar_color",
+      "label": "Progress Bar Fill Color",
+      "default": "#008060"
+    },
+    {
+      "type": "header",
+      "content": "Styling & Colors"
+    },
+    {
+      "type": "color",
+      "id": "bg_color",
+      "label": "Drawer Background Color",
+      "default": "#ffffff"
+    },
+    {
+      "type": "color",
+      "id": "text_color",
+      "label": "Text Color",
+      "default": "#121212"
+    },
+    {
+      "type": "color",
+      "id": "checkout_btn_bg",
+      "label": "Checkout Button Color",
+      "default": "#121212"
+    },
+    {
+      "type": "color",
+      "id": "checkout_btn_text",
+      "label": "Checkout Button Text Color",
+      "default": "#ffffff"
+    },
+    {
+      "type": "range",
+      "id": "base_font_size",
+      "min": 12,
+      "max": 18,
+      "step": 1,
+      "unit": "px",
+      "label": "Base Font Size",
+      "default": 14
+    },
+    {
+      "type": "range",
+      "id": "border_radius",
+      "min": 0,
+      "max": 24,
+      "step": 2,
+      "unit": "px",
+      "label": "Border Radius",
+      "default": 8
+    }
+  ]
+}
+{% endschema %}

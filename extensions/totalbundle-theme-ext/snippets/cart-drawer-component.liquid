@@ -1,0 +1,287 @@
+{% comment %}
+  TotalBundle - Cart Drawer Component
+  Slide-out cart with Free Shipping Bar, Product Add-ons, and Theme Font inheritance.
+{% endcomment %}
+
+{%- liquid
+  assign drawer_settings = app.metafields.cart_drawer.settings.value
+  if drawer_settings == blank
+    assign drawer_settings = shop.metafields.cart_drawer.settings.value
+  endif
+
+  assign is_enabled = true
+  if drawer_settings != blank and drawer_settings.enabled == false
+    assign is_enabled = false
+  endif
+
+  assign position = drawer_settings.drawerPosition | default: block.settings.drawer_position | default: 'right'
+  assign inherit_theme = drawer_settings.inheritThemeStyling
+  if inherit_theme == nil
+    assign inherit_theme = true
+  endif
+
+  assign font_family = drawer_settings.fontFamily | default: 'inherit'
+  if inherit_theme or font_family == 'inherit'
+    assign active_font = 'var(--font-body-family, inherit)'
+  else
+    assign active_font = font_family
+  endif
+
+  assign base_size = drawer_settings.baseFontSize | default: block.settings.base_font_size | default: 14
+  assign heading_size = drawer_settings.headingFontSize | default: block.settings.heading_font_size | default: 18
+  assign bg_color = drawer_settings.bgColor | default: block.settings.bg_color | default: '#ffffff'
+  assign text_color = drawer_settings.textColor | default: block.settings.text_color | default: '#121212'
+  assign muted_color = drawer_settings.mutedTextColor | default: '#6d7175'
+  assign border_color = drawer_settings.borderColor | default: '#e5e7eb'
+  assign radius = drawer_settings.borderRadius | default: block.settings.border_radius | default: 8
+  assign width = drawer_settings.drawerWidth | default: 420
+
+  assign free_shipping_enabled = drawer_settings.freeShippingEnabled
+  if free_shipping_enabled == nil
+    assign free_shipping_enabled = true
+  endif
+  assign threshold_val = drawer_settings.freeShippingThreshold | default: block.settings.free_shipping_threshold | default: 50
+  assign threshold_cents = threshold_val | times: 100
+  assign shipping_text = drawer_settings.freeShippingText | default: 'Add {amount} more for FREE Shipping!'
+  assign shipping_success_text = drawer_settings.freeShippingSuccessText | default: '🎉 You have unlocked Free Shipping!'
+  assign bar_color = drawer_settings.freeShippingBarColor | default: block.settings.free_shipping_bar_color | default: '#008060'
+  assign bar_bg_color = drawer_settings.freeShippingBarBgColor | default: '#e4e5e7'
+
+  assign checkout_btn_bg = drawer_settings.checkoutButtonBgColor | default: block.settings.checkout_btn_bg | default: '#121212'
+  assign checkout_btn_text = drawer_settings.checkoutButtonTextColor | default: block.settings.checkout_btn_text | default: '#ffffff'
+  assign checkout_btn_hover = drawer_settings.checkoutButtonHoverBgColor | default: '#2e2e2e'
+  assign checkout_btn_label = drawer_settings.checkoutButtonText | default: 'Proceed to Checkout'
+
+  assign addon_enabled = drawer_settings.addonEnabled
+  if addon_enabled == nil
+    assign addon_enabled = true
+  endif
+  assign addon_heading = drawer_settings.addonHeading | default: 'Complete your order'
+  assign addon_btn_text = drawer_settings.addonButtonText | default: '+ Add'
+  assign addon_btn_bg = drawer_settings.addonButtonBgColor | default: '#121212'
+  assign addon_btn_text_color = drawer_settings.addonButtonTextColor | default: '#ffffff'
+
+  assign show_note = drawer_settings.showCartNote
+  if show_note == nil
+    assign show_note = true
+  endif
+  assign note_placeholder = drawer_settings.cartNotePlaceholder | default: 'Special instructions for seller...'
+
+  assign show_view_cart = drawer_settings.showViewCartButton
+  if show_view_cart == nil
+    assign show_view_cart = true
+  endif
+  assign view_cart_label = drawer_settings.viewCartButtonText | default: 'View Cart Page'
+
+  assign empty_text = drawer_settings.emptyCartText | default: 'Your cart is currently empty'
+  assign empty_btn_text = drawer_settings.emptyCartButtonText | default: 'Explore Products'
+  assign empty_btn_url = drawer_settings.emptyCartButtonUrl | default: '/collections/all'
+
+  assign current_total = cart.total_price | default: 0
+  assign progress_ratio = current_total | times: 100 | divided_by: threshold_cents
+  if progress_ratio > 100
+    assign progress_ratio = 100
+  endif
+  assign remaining_cents = threshold_cents | minus: current_total
+-%}
+
+{%- if is_enabled -%}
+  <style>
+    #tb-cart-drawer-{{ block.id }} {
+      --tb-drawer-bg: {{ bg_color }};
+      --tb-drawer-text: {{ text_color }};
+      --tb-drawer-muted: {{ muted_color }};
+      --tb-drawer-border: {{ border_color }};
+      --tb-drawer-font: {{ active_font }};
+      --tb-drawer-base-size: {{ base_size }}px;
+      --tb-drawer-heading-size: {{ heading_size }}px;
+      --tb-drawer-radius: {{ radius }}px;
+      --tb-drawer-width: {{ width }}px;
+      --tb-free-shipping-bar: {{ bar_color }};
+      --tb-free-shipping-bg: {{ bar_bg_color }};
+      --tb-checkout-btn-bg: {{ checkout_btn_bg }};
+      --tb-checkout-btn-text: {{ checkout_btn_text }};
+      --tb-checkout-btn-hover: {{ checkout_btn_hover }};
+      --tb-addon-btn-bg: {{ addon_btn_bg }};
+      --tb-addon-btn-text: {{ addon_btn_text_color }};
+    }
+  </style>
+
+  <div class="tb-cart-drawer-backdrop" aria-hidden="true"></div>
+
+  <aside
+    id="tb-cart-drawer-{{ block.id }}"
+    class="tb-cart-drawer{% if position == 'left' %} tb-position-left{% endif %}"
+    role="dialog"
+    aria-modal="true"
+    aria-label="Shopping Cart Drawer"
+    data-free-shipping-threshold="{{ threshold_val }}"
+    data-free-shipping-text="{{ shipping_text | escape }}"
+    data-free-shipping-success-text="{{ shipping_success_text | escape }}"
+  >
+    <!-- Drawer Header -->
+    <header class="tb-drawer-header">
+      <div class="tb-drawer-title-wrap">
+        <h2 class="tb-drawer-title">Your Cart</h2>
+        <span class="tb-drawer-item-count">{{ cart.item_count }}</span>
+      </div>
+      <button type="button" class="tb-drawer-close-btn" aria-label="Close cart">
+        <svg viewBox="0 0 20 20" focusable="false" aria-hidden="true">
+          <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+        </svg>
+      </button>
+    </header>
+
+    <!-- Free Shipping Progress Bar at Top -->
+    {%- if free_shipping_enabled -%}
+      <div class="tb-free-shipping-section">
+        <div class="tb-free-shipping-text">
+          {%- if progress_ratio >= 100 -%}
+            {{ shipping_success_text }}
+          {%- else -%}
+            {%- assign remaining_money = remaining_cents | money -%}
+            {{ shipping_text | replace: '{amount}', remaining_money }}
+          {%- endif -%}
+        </div>
+        <div class="tb-free-shipping-track">
+          <div class="tb-free-shipping-fill{% if progress_ratio >= 100 %} tb-complete{% endif %}" style="width: {{ progress_ratio }}%;"></div>
+        </div>
+      </div>
+    {%- endif -%}
+
+    <!-- Scrollable Drawer Body -->
+    <div class="tb-drawer-body">
+      <!-- Empty Cart State -->
+      <div class="tb-drawer-empty" style="display: {% if cart.item_count == 0 %}flex{% else %}none{% endif %};">
+        <svg class="tb-drawer-empty-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+        </svg>
+        <h3 class="tb-drawer-empty-title">{{ empty_text }}</h3>
+        <a href="{{ empty_btn_url }}" class="tb-drawer-empty-btn">{{ empty_btn_text }}</a>
+      </div>
+
+      <!-- Cart Items List Container -->
+      <div class="tb-cart-items-wrap" style="display: {% if cart.item_count > 0 %}block{% else %}none{% endif %};">
+        <ul class="tb-cart-items">
+          {%- for item in cart.items -%}
+            <li class="tb-cart-item" data-item-key="{{ item.key }}" data-item-index="{{ forloop.index }}">
+              {%- if item.image -%}
+                <img
+                  class="tb-cart-item-image"
+                  src="{{ item.image | image_url: width: 140 }}"
+                  alt="{{ item.title | escape }}"
+                  loading="lazy"
+                />
+              {%- endif -%}
+
+              <div class="tb-cart-item-info">
+                <a href="{{ item.url }}" class="tb-cart-item-title">{{ item.product.title }}</a>
+                {%- unless item.product.has_only_default_variant -%}
+                  <span class="tb-cart-item-variant">{{ item.variant.title }}</span>
+                {%- endunless -%}
+
+                <div class="tb-cart-item-price-wrap">
+                  <span class="tb-cart-item-price">{{ item.final_line_price | money }}</span>
+                  {%- if item.original_line_price > item.final_line_price -%}
+                    <span class="tb-cart-item-compare-price">{{ item.original_line_price | money }}</span>
+                  {%- endif -%}
+                </div>
+
+                <div class="tb-cart-item-actions">
+                  <div class="tb-qty-stepper">
+                    <button type="button" data-action="minus" aria-label="Decrease quantity">−</button>
+                    <input type="number" class="tb-qty-input" value="{{ item.quantity }}" min="1" readonly />
+                    <button type="button" data-action="plus" aria-label="Increase quantity">+</button>
+                  </div>
+                  <button type="button" class="tb-cart-item-remove" aria-label="Remove item">Remove</button>
+                </div>
+              </div>
+            </li>
+          {%- endfor -%}
+        </ul>
+      </div>
+
+      <!-- Product Addon / Upsell Section -->
+      {%- if addon_enabled -%}
+        <div class="tb-drawer-addons">
+          <h4 class="tb-addons-heading">{{ addon_heading }}</h4>
+          <div class="tb-addons-list">
+            {%- if drawer_settings.addonItems != blank and drawer_settings.addonItems.size > 0 -%}
+              {%- for addon in drawer_settings.addonItems -%}
+                <div class="tb-addon-card">
+                  <div class="tb-addon-card-left">
+                    {%- if addon.image != blank -%}
+                      <img class="tb-addon-card-img" src="{{ addon.image }}" alt="{{ addon.title | escape }}" loading="lazy" />
+                    {%- endif -%}
+                    <div class="tb-addon-card-meta">
+                      <p class="tb-addon-card-title">{{ addon.title }}</p>
+                      <div class="tb-addon-card-prices">
+                        <span class="tb-addon-card-price">{{ addon.price }}</span>
+                        {%- if addon.compareAtPrice != blank -%}
+                          <span class="tb-addon-card-compare">{{ addon.compareAtPrice }}</span>
+                        {%- endif -%}
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    class="tb-addon-add-btn"
+                    data-variant-id="{{ addon.variantId }}"
+                    data-title="{{ addon.title | escape }}"
+                    data-price="{{ addon.price | escape }}"
+                  >
+                    {{ addon_btn_text }}
+                  </button>
+                </div>
+              {%- endfor -%}
+            {%- else -%}
+              <!-- Default built-in add-ons if none configured yet -->
+              <div class="tb-addon-card">
+                <div class="tb-addon-card-left">
+                  <img class="tb-addon-card-img" src="https://cdn.shopify.com/s/files/1/0533/2089/files/placeholder-images-lifestyle-1_small.png" alt="Gift Packaging" loading="lazy" />
+                  <div class="tb-addon-card-meta">
+                    <p class="tb-addon-card-title">Eco-Friendly Gift Packaging</p>
+                    <div class="tb-addon-card-prices">
+                      <span class="tb-addon-card-price">$4.99</span>
+                      <span class="tb-addon-card-compare">$8.00</span>
+                    </div>
+                  </div>
+                </div>
+                <button type="button" class="tb-addon-add-btn" data-title="Eco-Friendly Gift Packaging" data-price="$4.99">{{ addon_btn_text }}</button>
+              </div>
+            {%- endif -%}
+          </div>
+        </div>
+      {%- endif -%}
+    </div>
+
+    <!-- Sticky Drawer Footer -->
+    <footer class="tb-drawer-footer" style="display: {% if cart.item_count > 0 %}flex{% else %}none{% endif %};">
+      {%- if show_note -%}
+        <button type="button" class="tb-drawer-note-toggle">
+          <span>✎ Add order note</span>
+        </button>
+        <textarea
+          class="tb-drawer-note-textarea"
+          placeholder="{{ note_placeholder }}"
+          style="display: none;"
+        >{{ cart.note }}</textarea>
+      {%- endif -%}
+
+      <div class="tb-drawer-subtotal-row">
+        <span class="tb-drawer-subtotal-label">Subtotal</span>
+        <span class="tb-drawer-subtotal-val">{{ cart.total_price | money }}</span>
+      </div>
+
+      <p class="tb-drawer-tax-note">Taxes and shipping calculated at checkout.</p>
+
+      <a href="/checkout" class="tb-drawer-checkout-btn">
+        {{ checkout_btn_label }}
+      </a>
+
+      {%- if show_view_cart -%}
+        <a href="/cart" class="tb-drawer-view-cart-link">{{ view_cart_label }}</a>
+      {%- endif -%}
+    </footer>
+  </aside>
+{%- endif -%}
