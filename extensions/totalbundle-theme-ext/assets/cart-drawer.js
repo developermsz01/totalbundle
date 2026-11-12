@@ -762,7 +762,7 @@
     var trackColor = this.drawer.dataset.freeShippingBarBgColor || this.barBgColor || '#e4e5e7';
     this.shippingFillEl.style.setProperty('background-color', barColor, 'important');
     this.shippingFillEl.style.setProperty('background', barColor, 'important');
-    this.shippingFillEl.style.minWidth = '8px';
+    this.shippingFillEl.style.minWidth = percentage > 0 ? '8px' : '0px';
     this.shippingFillEl.style.height = '10px';
     this.shippingFillEl.style.display = 'block';
 

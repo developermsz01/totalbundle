@@ -148,7 +148,7 @@
           {%- endif -%}
         </div>
         <div class="tb-free-shipping-track" style="height: 10px; min-height: 10px; background-color: {{ bar_bg_color }};">
-          <div class="tb-free-shipping-fill{% if progress_ratio >= 100 %} tb-complete{% endif %}" style="height: 10px; width: {{ progress_ratio }}%; min-width: 8px; background-color: {{ bar_color }};"></div>
+          <div class="tb-free-shipping-fill{% if progress_ratio >= 100 %} tb-complete{% endif %}" style="height: 10px; width: {{ progress_ratio }}%; min-width: {% if progress_ratio > 0 %}8px{% else %}0px{% endif %}; background-color: {{ bar_color }};"></div>
         </div>
       </div>
     {%- endif -%}
