@@ -205,13 +205,13 @@
         </ul>
       </div>
 
-      <!-- Product Addon / Upsell Section -->
-      {%- if addon_enabled -%}
+      <!-- Product Addon / Upsell Section (Only shown if products are configured) -->
+      {%- if addon_enabled and drawer_settings.addonItems != blank and drawer_settings.addonItems.size > 0 -%}
         <div class="tb-drawer-addons">
           <h4 class="tb-addons-heading">{{ addon_heading }}</h4>
           <div class="tb-addons-list">
-            {%- if drawer_settings.addonItems != blank and drawer_settings.addonItems.size > 0 -%}
-              {%- for addon in drawer_settings.addonItems -%}
+            {%- for addon in drawer_settings.addonItems -%}
+              {%- if addon.title != blank -%}
                 <div class="tb-addon-card">
                   <div class="tb-addon-card-left">
                     {%- if addon.image != blank -%}
@@ -237,23 +237,8 @@
                     {{ addon_btn_text }}
                   </button>
                 </div>
-              {%- endfor -%}
-            {%- else -%}
-              <!-- Default built-in add-ons if none configured yet -->
-              <div class="tb-addon-card">
-                <div class="tb-addon-card-left">
-                  <img class="tb-addon-card-img" src="https://cdn.shopify.com/s/files/1/0533/2089/files/placeholder-images-lifestyle-1_small.png" alt="Gift Packaging" loading="lazy" />
-                  <div class="tb-addon-card-meta">
-                    <p class="tb-addon-card-title">Eco-Friendly Gift Packaging</p>
-                    <div class="tb-addon-card-prices">
-                      <span class="tb-addon-card-price">$4.99</span>
-                      <span class="tb-addon-card-compare">$8.00</span>
-                    </div>
-                  </div>
-                </div>
-                <button type="button" class="tb-addon-add-btn" data-title="Eco-Friendly Gift Packaging" data-price="$4.99">{{ addon_btn_text }}</button>
-              </div>
-            {%- endif -%}
+              {%- endif -%}
+            {%- endfor -%}
           </div>
         </div>
       {%- endif -%}

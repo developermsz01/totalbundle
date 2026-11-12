@@ -1948,8 +1948,8 @@ export function TotalBundleDashboard({ forcedFeature }: { forcedFeature?: "stick
                           )}
                         </div>
 
-                        {/* Product Addon Section in Preview */}
-                        {drawerSettings.addonEnabled && (
+                        {/* Product Addon Section in Preview (Only if addons are configured) */}
+                        {drawerSettings.addonEnabled && (drawerSettings.addonItems || []).length > 0 && (
                           <div
                             style={{
                               margin: "0 10px 10px 10px",

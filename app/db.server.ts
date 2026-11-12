@@ -116,24 +116,7 @@ export const defaultCartDrawerSettings: CartDrawerSettings = {
 
   addonEnabled: true,
   addonHeading: "Complete your order (Special Add-on)",
-  addonItems: [
-    {
-      id: "addon-1",
-      title: "Eco-Friendly Gift Packaging",
-      price: "$4.99",
-      compareAtPrice: "$8.00",
-      image: "https://cdn.shopify.com/s/files/1/0533/2089/files/placeholder-images-lifestyle-1_small.png",
-      variantId: "",
-    },
-    {
-      id: "addon-2",
-      title: "1-Year Extended Warranty Protection",
-      price: "$9.99",
-      compareAtPrice: "$15.00",
-      image: "https://cdn.shopify.com/s/files/1/0533/2089/files/placeholder-images-lifestyle-2_small.png",
-      variantId: "",
-    },
-  ],
+  addonItems: [],
   addonButtonText: "+ Add",
 
   showCartNote: true,
