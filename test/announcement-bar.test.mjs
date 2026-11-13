@@ -56,7 +56,7 @@ describe('Announcement Bar Storefront Theme App Extension Structure', () => {
     assert.ok(content.includes('"settings": []'), 'Must have zero customizer clutter (settings: [])');
   });
 
-  it('snippets/announcement-bar-component.liquid renders multi-mode (marquee, rotating, static)', () => {
+  it('snippets/announcement-bar-component.liquid renders multi-mode (marquee, rotating, static) and suppresses native theme bars', () => {
     const filePath = path.join(rootDir, 'extensions/totalbundle-theme-ext/snippets/announcement-bar-component.liquid');
     assert.ok(fs.existsSync(filePath), 'announcement-bar-component.liquid must exist');
 
@@ -65,9 +65,11 @@ describe('Announcement Bar Storefront Theme App Extension Structure', () => {
     assert.ok(content.includes('tb-rotating-track'), 'Must support rotating one-by-one mode');
     assert.ok(content.includes('tb-static-center'), 'Must support static center mode');
     assert.ok(content.includes('app.metafields.announcement_bar.settings.value'), 'Must read announcement_bar metafield');
+    assert.ok(content.includes('announcement-bar:not(#tb-announcement-bar)'), 'Must suppress native theme announcement bar');
+    assert.ok(content.includes('mountTop'), 'Must mount announcement bar at top of page');
   });
 
-  it('assets/announcement-bar.css contains marquee keyframe animations and slide transitions', () => {
+  it('assets/announcement-bar.css contains marquee keyframe animations, slide transitions, and theme suppression', () => {
     const filePath = path.join(rootDir, 'extensions/totalbundle-theme-ext/assets/announcement-bar.css');
     assert.ok(fs.existsSync(filePath), 'announcement-bar.css must exist');
 
@@ -75,9 +77,10 @@ describe('Announcement Bar Storefront Theme App Extension Structure', () => {
     assert.ok(content.includes('tb-marquee-scroll'), 'Must define marquee keyframe animation');
     assert.ok(content.includes('tb-rotating-slide'), 'Must define rotating slide styles');
     assert.ok(content.includes('tb-announcement-bar'), 'Must define main bar container');
+    assert.ok(content.includes('announcement-bar:not(#tb-announcement-bar)'), 'Must suppress native theme announcement bars in CSS');
   });
 
-  it('assets/announcement-bar.js contains timer rotation, dismiss persistence, and live settings', () => {
+  it('assets/announcement-bar.js contains timer rotation, dismiss persistence, top mounting, and live settings', () => {
     const filePath = path.join(rootDir, 'extensions/totalbundle-theme-ext/assets/announcement-bar.js');
     assert.ok(fs.existsSync(filePath), 'announcement-bar.js must exist');
 
@@ -86,6 +89,7 @@ describe('Announcement Bar Storefront Theme App Extension Structure', () => {
     assert.ok(content.includes('startRotation'), 'Must support automatic slide rotation');
     assert.ok(content.includes('sessionStorage'), 'Must persist dismiss state via sessionStorage');
     assert.ok(content.includes('/api/announcement-bar-settings'), 'Must fetch live settings');
+    assert.ok(content.includes('mountAtTop'), 'Must include mountAtTop method');
   });
 
   it('app/routes/api.announcement-bar-settings.ts and app.announcement-bar.tsx exist', () => {

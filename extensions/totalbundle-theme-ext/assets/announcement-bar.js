@@ -23,6 +23,9 @@
     this.bar = document.querySelector('.tb-announcement-bar');
     if (!this.bar) return;
 
+    // Immediately replace theme announcement bar & mount at top
+    this.mountAtTop();
+
     // Check if user previously dismissed this session
     try {
       if (sessionStorage.getItem('tb_announcement_dismissed') === 'true') {
@@ -133,6 +136,49 @@
     }
   };
 
+  TotalBundleAnnouncementBar.prototype.mountAtTop = function () {
+    if (!this.bar) return;
+    var themeSelectors = [
+      'announcement-bar',
+      '.announcement-bar:not(#tb-announcement-bar):not(.tb-announcement-bar)',
+      '.announcement-bar-section',
+      '[data-section-type="announcement-bar"]',
+      '[data-section-type="header-announcements"]',
+      '#shopify-section-announcement-bar',
+      '[id*="shopify-section-announcement-bar"]',
+      '[id*="shopify-section-sections--announcement_bar"]',
+      '[id*="shopify-section-sections--"][id*="announcement"]',
+      '[id*="announcement-bar"]:not(#tb-announcement-bar):not([id*="tb-announcement"])',
+      '.site-header__announcement',
+      '.header-announcement',
+      '.utility-bar'
+    ];
+    var themeBar = null;
+    for (var i = 0; i < themeSelectors.length; i++) {
+      var found = document.querySelector(themeSelectors[i]);
+      if (found && !found.contains(this.bar) && found !== this.bar) {
+        themeBar = found;
+        break;
+      }
+    }
+
+    if (themeBar && themeBar.parentNode) {
+      themeBar.style.setProperty('display', 'none', 'important');
+      if (this.bar.nextSibling !== themeBar) {
+        themeBar.parentNode.insertBefore(this.bar, themeBar);
+      }
+    } else if (document.body) {
+      var header = document.querySelector('header, .header, #shopify-section-header, .site-header, [data-section-type="header"]');
+      if (header && header.parentNode && header.parentNode === document.body) {
+        if (this.bar.nextSibling !== header) {
+          document.body.insertBefore(this.bar, header);
+        }
+      } else if (document.body.firstChild && document.body.firstChild !== this.bar) {
+        document.body.insertBefore(this.bar, document.body.firstChild);
+      }
+    }
+  };
+
   TotalBundleAnnouncementBar.prototype.fetchLiveSettings = function () {
     var self = this;
     var shopDomain = window.Shopify && window.Shopify.shop ? window.Shopify.shop : '';
@@ -147,8 +193,17 @@
           if (s.enabled === false) {
             self.bar.style.display = 'none';
             self.stopRotation();
+            // Restore theme bars
+            var overrideTag = document.getElementById('tb-announcement-bar-theme-override');
+            if (overrideTag) overrideTag.remove();
+            var themeBars = document.querySelectorAll('announcement-bar, .announcement-bar:not(#tb-announcement-bar), .utility-bar');
+            for (var i = 0; i < themeBars.length; i++) {
+              themeBars[i].style.removeProperty('display');
+            }
             return;
           }
+          self.bar.style.display = '';
+          self.mountAtTop();
           if (s.bgColor) {
             self.bar.style.setProperty('--tb-announcement-bg', s.bgColor);
           }

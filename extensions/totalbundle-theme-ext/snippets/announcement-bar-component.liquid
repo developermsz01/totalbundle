@@ -33,6 +33,35 @@
 -%}
 
 {%- if is_enabled -%}
+  <style id="tb-announcement-bar-theme-override">
+    /* Instant theme announcement bar suppression */
+    announcement-bar,
+    .announcement-bar:not(#tb-announcement-bar):not(.tb-announcement-bar),
+    .announcement-bar-section,
+    .announcement-bar-wrapper:not(#tb-announcement-bar),
+    [data-section-type="announcement-bar"],
+    [data-section-type="header-announcements"],
+    #shopify-section-announcement-bar,
+    [id*="shopify-section-announcement-bar"],
+    [id*="shopify-section-sections--announcement_bar"],
+    [id*="shopify-section-sections--"][id*="announcement"],
+    [id*="announcement-bar"]:not(#tb-announcement-bar):not([id*="tb-announcement"]),
+    [id*="announcement_bar"]:not(#tb-announcement-bar):not([id*="tb-announcement"]),
+    .site-header__announcement,
+    .header-announcement,
+    .utility-bar:not(:has(:not(.announcement-bar))),
+    .utility-bar .announcement-bar {
+      display: none !important;
+      visibility: hidden !important;
+      height: 0 !important;
+      min-height: 0 !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      overflow: hidden !important;
+      pointer-events: none !important;
+    }
+  </style>
+
   <div
     id="tb-announcement-bar"
     class="tb-announcement-bar{% if is_sticky %} tb-is-sticky{% endif %}{% if pause_on_hover %} tb-pause-hover{% endif %} tb-device-{{ device_target }}"
@@ -140,5 +169,53 @@
       {%- endif -%}
     </div>
   </div>
+
+  <script>
+    (function () {
+      function mountTop() {
+        var bar = document.getElementById('tb-announcement-bar');
+        if (!bar) return;
+        var themeSelectors = [
+          'announcement-bar',
+          '.announcement-bar:not(#tb-announcement-bar):not(.tb-announcement-bar)',
+          '.announcement-bar-section',
+          '[data-section-type="announcement-bar"]',
+          '[id*="shopify-section-announcement-bar"]',
+          '[id*="shopify-section-sections--announcement_bar"]',
+          '[id*="shopify-section-sections--"][id*="announcement"]',
+          '.site-header__announcement',
+          '.header-announcement',
+          '.utility-bar'
+        ];
+        var themeBar = null;
+        for (var i = 0; i < themeSelectors.length; i++) {
+          var found = document.querySelector(themeSelectors[i]);
+          if (found && !found.contains(bar) && found !== bar) {
+            themeBar = found;
+            break;
+          }
+        }
+        if (themeBar && themeBar.parentNode) {
+          themeBar.style.setProperty('display', 'none', 'important');
+          if (bar.nextSibling !== themeBar) {
+            themeBar.parentNode.insertBefore(bar, themeBar);
+          }
+        } else if (document.body) {
+          var header = document.querySelector('header, .header, #shopify-section-header, .site-header, [data-section-type="header"]');
+          if (header && header.parentNode && header.parentNode === document.body) {
+            if (bar.nextSibling !== header) {
+              document.body.insertBefore(bar, header);
+            }
+          } else if (document.body.firstChild && document.body.firstChild !== bar) {
+            document.body.insertBefore(bar, document.body.firstChild);
+          }
+        }
+      }
+      mountTop();
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', mountTop);
+      }
+    })();
+  </script>
 {%- endif -%}
 

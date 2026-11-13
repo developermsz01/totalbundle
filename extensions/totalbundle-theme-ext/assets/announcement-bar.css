@@ -3,6 +3,36 @@
  * Multi-mode: Continuous Marquee Scrolling Ticker, Centered Rotating Slides, and Static Center.
  */
 
+/* ======================================================== */
+/* AUTOMATIC THEME ANNOUNCEMENT BAR SUPPRESSION             */
+/* Automatically replaces Dawn, Prestige, Sense, Debut, etc */
+/* ======================================================== */
+announcement-bar,
+.announcement-bar:not(#tb-announcement-bar):not(.tb-announcement-bar),
+.announcement-bar-section,
+.announcement-bar-wrapper:not(#tb-announcement-bar),
+[data-section-type="announcement-bar"],
+[data-section-type="header-announcements"],
+#shopify-section-announcement-bar,
+[id*="shopify-section-announcement-bar"],
+[id*="shopify-section-sections--announcement_bar"],
+[id*="shopify-section-sections--"][id*="announcement"],
+[id*="announcement-bar"]:not(#tb-announcement-bar):not([id*="tb-announcement"]),
+[id*="announcement_bar"]:not(#tb-announcement-bar):not([id*="tb-announcement"]),
+.site-header__announcement,
+.header-announcement,
+.utility-bar:not(:has(:not(.announcement-bar))),
+.utility-bar .announcement-bar {
+  display: none !important;
+  visibility: hidden !important;
+  height: 0 !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  pointer-events: none !important;
+}
+
 :root {
   --tb-announcement-bg: #111827;
   --tb-announcement-color: #ffffff;
