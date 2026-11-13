@@ -184,6 +184,110 @@
     this.bar.style.setProperty('visibility', 'visible', 'important');
   };
 
+  function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
+  TotalBundleAnnouncementBar.prototype.applySettings = function (s) {
+    if (!s || !this.bar) return;
+
+    this.mode = s.mode || this.mode || 'rotating';
+    this.bar.dataset.mode = this.mode;
+
+    if (s.rotationInterval) {
+      this.intervalSeconds = parseFloat(s.rotationInterval) || 4;
+    }
+    if (s.marqueeSpeed) {
+      this.bar.style.setProperty('--tb-marquee-duration', (parseFloat(s.marqueeSpeed) || 25) + 's');
+    }
+
+    if (s.bgColor) {
+      this.bar.style.setProperty('--tb-announcement-bg', s.bgColor);
+    }
+    if (s.textColor) {
+      this.bar.style.setProperty('--tb-announcement-color', s.textColor);
+    }
+    if (s.fontSize) {
+      this.bar.style.setProperty('--tb-announcement-size', s.fontSize + 'px');
+    }
+
+    if (s.isSticky) {
+      this.bar.classList.add('tb-is-sticky');
+    } else {
+      this.bar.classList.remove('tb-is-sticky');
+    }
+
+    var messages = (s.messages && s.messages.length > 0) ? s.messages : [
+      { text: "🎉 Free Shipping on all orders over $50!", link: "" }
+    ];
+
+    var inner = this.bar.querySelector('.tb-announcement-inner');
+    if (!inner) return;
+
+    // Dynamically render the mode-specific HTML
+    var html = '';
+    if (this.mode === 'marquee') {
+      var itemsHtml = messages.map(function (m) {
+        var content = m.link
+          ? '<a href="' + escapeHtml(m.link) + '" class="tb-announcement-link">' + escapeHtml(m.text) + '</a>'
+          : '<span>' + escapeHtml(m.text) + '</span>';
+        return '<span class="tb-marquee-item">' + content + '</span>';
+      }).join('');
+
+      html = '<div class="tb-marquee-track" aria-hidden="false">' +
+               '<div class="tb-marquee-content">' + itemsHtml + '</div>' +
+               '<div class="tb-marquee-content" aria-hidden="true">' + itemsHtml + '</div>' +
+             '</div>';
+    } else if (this.mode === 'rotating') {
+      var slidesHtml = messages.map(function (m, idx) {
+        var activeClass = idx === 0 ? ' tb-active' : '';
+        var content = m.link
+          ? '<a href="' + escapeHtml(m.link) + '" class="tb-announcement-link">' + escapeHtml(m.text) + '</a>'
+          : '<span>' + escapeHtml(m.text) + '</span>';
+        return '<div class="tb-rotating-slide' + activeClass + '" data-slide-index="' + idx + '">' + content + '</div>';
+      }).join('');
+
+      html = '<div class="tb-rotating-track">' +
+               '<button type="button" class="tb-rotator-arrow tb-rotator-prev" aria-label="Previous announcement">‹</button>' +
+               '<div class="tb-rotating-slides">' + slidesHtml + '</div>' +
+               '<button type="button" class="tb-rotator-arrow tb-rotator-next" aria-label="Next announcement">›</button>' +
+             '</div>';
+    } else {
+      // Static Centered
+      var firstMsg = messages[0] || { text: "🎉 Free Shipping on all orders over $50!", link: "" };
+      var content = firstMsg.link
+        ? '<a href="' + escapeHtml(firstMsg.link) + '" class="tb-announcement-link">' + escapeHtml(firstMsg.text) + '</a>'
+        : '<span>' + escapeHtml(firstMsg.text) + '</span>';
+      html = '<div class="tb-static-center">' + content + '</div>';
+    }
+
+    if (s.showCloseButton) {
+      html += '<button type="button" class="tb-announcement-close" aria-label="Close announcement bar">×</button>';
+    }
+
+    inner.innerHTML = html;
+
+    // Reset controls & timer for the new mode
+    this.stopRotation();
+    this.slides = Array.prototype.slice.call(this.bar.querySelectorAll('.tb-rotating-slide'));
+    this.prevBtn = this.bar.querySelector('.tb-rotator-prev');
+    this.nextBtn = this.bar.querySelector('.tb-rotator-next');
+    this.closeBtn = this.bar.querySelector('.tb-announcement-close');
+    this.currentIndex = 0;
+
+    this.initEvents();
+
+    if (this.mode === 'rotating' && this.slides.length > 1) {
+      this.startRotation();
+    }
+  };
+
   TotalBundleAnnouncementBar.prototype.fetchLiveSettings = function () {
     var self = this;
     var shopDomain = window.Shopify && window.Shopify.shop ? window.Shopify.shop : '';
@@ -207,17 +311,10 @@
             }
             return;
           }
-          self.bar.style.display = '';
+
+          self.bar.style.display = 'block';
           self.mountAtTop();
-          if (s.bgColor) {
-            self.bar.style.setProperty('--tb-announcement-bg', s.bgColor);
-          }
-          if (s.textColor) {
-            self.bar.style.setProperty('--tb-announcement-color', s.textColor);
-          }
-          if (s.fontSize) {
-            self.bar.style.setProperty('--tb-announcement-size', s.fontSize + 'px');
-          }
+          self.applySettings(s);
         }
       })
       .catch(function () {});

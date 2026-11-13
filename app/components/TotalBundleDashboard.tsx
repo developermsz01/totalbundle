@@ -164,6 +164,21 @@ export function TotalBundleDashboard({ forcedFeature }: { forcedFeature?: "stick
   const freeShippingPercent = Math.min(100, Math.round((drawerSubtotal / freeShippingThreshold) * 100));
   const remainingForFreeShipping = Math.max(0, freeShippingThreshold - drawerSubtotal);
 
+  // Announcement bar live preview slide rotation
+  const [announcementPreviewIdx, setAnnouncementPreviewIdx] = useState(0);
+
+  useEffect(() => {
+    if (activeFeature !== "announcement-bar" || announcementSettings.mode !== "rotating") return;
+    const ms = Math.max(2000, (announcementSettings.rotationInterval || 4) * 1000);
+    const interval = setInterval(() => {
+      setAnnouncementPreviewIdx((prev) => {
+        const count = announcementSettings.messages?.length || 1;
+        return (prev + 1) % count;
+      });
+    }, ms);
+    return () => clearInterval(interval);
+  }, [activeFeature, announcementSettings.mode, announcementSettings.rotationInterval, announcementSettings.messages]);
+
   useEffect(() => {
     if (actionData?.success) {
       if (actionData.feature === "announcement-bar") {
@@ -2740,23 +2755,47 @@ export function TotalBundleDashboard({ forcedFeature }: { forcedFeature?: "stick
                             }}
                           >
                             {announcementSettings.mode === "marquee" ? (
-                              <div style={{ whiteSpace: "nowrap", overflow: "hidden", width: "100%" }}>
-                                <marquee
-                                  behavior="scroll"
-                                  direction="left"
-                                  scrollamount="4"
-                                  style={{ display: "block" }}
-                                >
-                                  {(announcementSettings.messages || []).map((m) => m.text).join("   •   ")}
-                                </marquee>
+                              <div style={{ whiteSpace: "nowrap", overflow: "hidden", width: "100%", display: "flex", gap: "24px" }}>
+                                <div style={{ animation: "tbDashboardMarquee 15s linear infinite", display: "inline-flex", gap: "24px", whiteSpace: "nowrap" }}>
+                                  {(announcementSettings.messages || []).map((m, idx) => (
+                                    <span key={idx} style={{ display: "inline-block" }}>{m.text}</span>
+                                  ))}
+                                  {(announcementSettings.messages || []).map((m, idx) => (
+                                    <span key={`dup-${idx}`} style={{ display: "inline-block" }}>{m.text}</span>
+                                  ))}
+                                </div>
+                                <style>{`
+                                  @keyframes tbDashboardMarquee {
+                                    0% { transform: translateX(0); }
+                                    100% { transform: translateX(-50%); }
+                                  }
+                                `}</style>
                               </div>
                             ) : announcementSettings.mode === "rotating" ? (
                               <InlineStack align="space-between" blockAlign="center" gap="100">
-                                <span style={{ opacity: 0.6, fontSize: "12px", cursor: "pointer" }}>‹</span>
-                                <span style={{ flex: 1, padding: "0 8px" }}>
-                                  {announcementSettings.messages?.[0]?.text || "Free Shipping over $50!"}
+                                <span
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    const len = announcementSettings.messages?.length || 1;
+                                    setAnnouncementPreviewIdx((prev) => (prev - 1 + len) % len);
+                                  }}
+                                  style={{ opacity: 0.7, fontSize: "14px", cursor: "pointer", padding: "0 4px", userSelect: "none" }}
+                                >
+                                  ‹
                                 </span>
-                                <span style={{ opacity: 0.6, fontSize: "12px", cursor: "pointer" }}>›</span>
+                                <span style={{ flex: 1, padding: "0 8px", transition: "all 0.3s ease" }}>
+                                  {announcementSettings.messages?.[announcementPreviewIdx % (announcementSettings.messages?.length || 1)]?.text || "Free Shipping over $50!"}
+                                </span>
+                                <span
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    const len = announcementSettings.messages?.length || 1;
+                                    setAnnouncementPreviewIdx((prev) => (prev + 1) % len);
+                                  }}
+                                  style={{ opacity: 0.7, fontSize: "14px", cursor: "pointer", padding: "0 4px", userSelect: "none" }}
+                                >
+                                  ›
+                                </span>
                               </InlineStack>
                             ) : (
                               <span>

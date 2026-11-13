@@ -80,7 +80,7 @@ describe('Announcement Bar Storefront Theme App Extension Structure', () => {
     assert.ok(content.includes('announcement-bar:not(#tb-announcement-bar)'), 'Must suppress native theme announcement bars in CSS');
   });
 
-  it('assets/announcement-bar.js contains timer rotation, dismiss persistence, top mounting, and live settings', () => {
+  it('assets/announcement-bar.js contains timer rotation, dismiss persistence, top mounting, and dynamic mode rendering', () => {
     const filePath = path.join(rootDir, 'extensions/totalbundle-theme-ext/assets/announcement-bar.js');
     assert.ok(fs.existsSync(filePath), 'announcement-bar.js must exist');
 
@@ -90,6 +90,9 @@ describe('Announcement Bar Storefront Theme App Extension Structure', () => {
     assert.ok(content.includes('sessionStorage'), 'Must persist dismiss state via sessionStorage');
     assert.ok(content.includes('/api/announcement-bar-settings'), 'Must fetch live settings');
     assert.ok(content.includes('mountAtTop'), 'Must include mountAtTop method');
+    assert.ok(content.includes('applySettings'), 'Must include applySettings method for dynamic mode switching');
+    assert.ok(content.includes('tb-marquee-track'), 'Must render marquee track dynamically');
+    assert.ok(content.includes('tb-static-center'), 'Must render static center dynamically');
   });
 
   it('app/routes/api.announcement-bar-settings.ts and app.announcement-bar.tsx exist', () => {

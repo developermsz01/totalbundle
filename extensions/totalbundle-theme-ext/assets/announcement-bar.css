@@ -129,6 +129,7 @@ announcement-bar,
   display: flex;
   align-items: center;
   flex-shrink: 0;
+  min-width: 100%;
   gap: 36px;
   padding-right: 36px;
   animation: tb-marquee-scroll var(--tb-marquee-duration, 25s) linear infinite;
