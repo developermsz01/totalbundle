@@ -95,3 +95,4 @@ describe('Announcement Bar Storefront Theme App Extension Structure', () => {
     assert.ok(fs.existsSync(appRoute), 'app.announcement-bar.tsx must exist');
   });
 });
+
