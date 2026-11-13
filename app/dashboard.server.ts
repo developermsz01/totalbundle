@@ -6,13 +6,16 @@ import {
   saveStickyCartSettings,
   getCartDrawerSettings,
   saveCartDrawerSettings,
+  getAnnouncementBarSettings,
+  saveAnnouncementBarSettings,
   type StickyCartSettings,
   type CartDrawerSettings,
+  type AnnouncementBarSettings,
 } from "./db.server";
 
 export async function handleDashboardLoader(
   request: Request,
-  forcedFeature?: "sticky-cart" | "cart-drawer"
+  forcedFeature?: "sticky-cart" | "cart-drawer" | "announcement-bar"
 ) {
   let shop = "your-store.myshopify.com";
   let storeProducts: Array<{
@@ -97,11 +100,13 @@ export async function handleDashboardLoader(
   }
 
   const url = new URL(request.url);
-  let initialFeature: "sticky-cart" | "cart-drawer" = forcedFeature || "sticky-cart";
+  let initialFeature: "sticky-cart" | "cart-drawer" | "announcement-bar" = forcedFeature || "sticky-cart";
 
   if (!forcedFeature) {
     const featureParam = url.searchParams.get("feature");
-    if (featureParam === "cart-drawer" || url.pathname.includes("cart-drawer")) {
+    if (featureParam === "announcement-bar" || url.pathname.includes("announcement-bar")) {
+      initialFeature = "announcement-bar";
+    } else if (featureParam === "cart-drawer" || url.pathname.includes("cart-drawer")) {
       initialFeature = "cart-drawer";
     } else {
       initialFeature = "sticky-cart";
@@ -110,11 +115,13 @@ export async function handleDashboardLoader(
 
   const stickySettings = getStickyCartSettings(shop);
   const cartDrawerSettings = getCartDrawerSettings(shop);
+  const announcementBarSettings = getAnnouncementBarSettings(shop);
 
   return json({
     shop,
     stickySettings,
     cartDrawerSettings,
+    announcementBarSettings,
     storeProducts,
     initialFeature,
     themeEditorUrl: `https://${shop}/admin/themes/current/editor?context=apps`,
@@ -306,6 +313,90 @@ export async function handleDashboardAction(request: Request) {
         }
 
         return json({ success: true, feature: "sticky-cart", settings: updated });
+      }
+
+      // Announcement Bar settings
+      if (feature === "announcement-bar") {
+        const parsed = JSON.parse(String(rawSettings)) as AnnouncementBarSettings;
+        const updated = saveAnnouncementBarSettings(shop, parsed);
+
+        // Sync settings to Shopify Metafields (both App Installation and Shop)
+        if (admin) {
+          try {
+            const shopQueryRes = await admin.graphql(
+              `#graphql
+              query GetShopAndAppIdAnnouncement {
+                shop {
+                  id
+                }
+                currentAppInstallation {
+                  id
+                }
+              }`
+            );
+            const shopQueryJson = await shopQueryRes.json();
+            const shopId = shopQueryJson?.data?.shop?.id;
+            const appInstallationId = shopQueryJson?.data?.currentAppInstallation?.id;
+
+            const metafieldsToSet: Array<{
+              namespace: string;
+              key: string;
+              type: string;
+              value: string;
+              ownerId: string;
+            }> = [];
+
+            const serializedSettings = JSON.stringify(updated);
+
+            if (shopId) {
+              metafieldsToSet.push({
+                namespace: "announcement_bar",
+                key: "settings",
+                type: "json",
+                value: serializedSettings,
+                ownerId: shopId,
+              });
+            }
+
+            if (appInstallationId) {
+              metafieldsToSet.push({
+                namespace: "announcement_bar",
+                key: "settings",
+                type: "json",
+                value: serializedSettings,
+                ownerId: appInstallationId,
+              });
+            }
+
+            if (metafieldsToSet.length > 0) {
+              await admin.graphql(
+                `#graphql
+                mutation SaveAnnouncementBarSettings($metafieldsSetInput: [MetafieldsSetInput!]!) {
+                  metafieldsSet(metafields: $metafieldsSetInput) {
+                    metafields {
+                      id
+                      namespace
+                      key
+                    }
+                    userErrors {
+                      field
+                      message
+                    }
+                  }
+                }`,
+                {
+                  variables: {
+                    metafieldsSetInput: metafieldsToSet,
+                  },
+                }
+              );
+            }
+          } catch (metafieldError) {
+            console.warn("[dashboard.server] Announcement bar metafield sync skipped/failed:", metafieldError);
+          }
+        }
+
+        return json({ success: true, feature: "announcement-bar", settings: updated });
       }
     } catch (e) {
       return json({ success: false, error: "Failed to parse settings" }, { status: 400 });

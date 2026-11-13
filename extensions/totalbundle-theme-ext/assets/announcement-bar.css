@@ -1,0 +1,230 @@
+/**
+ * TotalBundle Announcement Bar Styles
+ * Multi-mode: Continuous Marquee Scrolling Ticker, Centered Rotating Slides, and Static Center.
+ */
+
+:root {
+  --tb-announcement-bg: #111827;
+  --tb-announcement-color: #ffffff;
+  --tb-announcement-size: 13px;
+  --tb-marquee-duration: 25s;
+}
+
+.tb-announcement-bar {
+  width: 100%;
+  background-color: var(--tb-announcement-bg, #111827);
+  color: var(--tb-announcement-color, #ffffff);
+  font-size: var(--tb-announcement-size, 13px);
+  line-height: 1.4;
+  position: relative;
+  z-index: 99998;
+  font-family: inherit;
+  box-sizing: border-box;
+  overflow: hidden;
+  letter-spacing: 0.3px;
+}
+
+.tb-announcement-bar * {
+  box-sizing: border-box;
+}
+
+/* Sticky Mode */
+.tb-announcement-bar.tb-is-sticky {
+  position: sticky;
+  top: 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+}
+
+/* Device Targeting */
+@media (max-width: 767px) {
+  .tb-announcement-bar.tb-device-desktop {
+    display: none !important;
+  }
+}
+
+@media (min-width: 768px) {
+  .tb-announcement-bar.tb-device-mobile {
+    display: none !important;
+  }
+}
+
+/* Inner Container */
+.tb-announcement-inner {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 38px;
+  padding: 8px 16px;
+}
+
+/* Links inside bar */
+.tb-announcement-link {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  transition: opacity 0.2s ease;
+}
+
+.tb-announcement-link:hover {
+  opacity: 0.85;
+}
+
+/* ========================================================= */
+/* MODE 1: Continuous Horizontal Scrolling Marquee Ticker    */
+/* ========================================================= */
+.tb-marquee-track {
+  display: flex;
+  width: 100%;
+  overflow: hidden;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.tb-marquee-content {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 36px;
+  padding-right: 36px;
+  animation: tb-marquee-scroll var(--tb-marquee-duration, 25s) linear infinite;
+}
+
+.tb-marquee-item {
+  display: inline-flex;
+  align-items: center;
+  font-weight: 500;
+}
+
+@keyframes tb-marquee-scroll {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  100% {
+    transform: translate3d(-100%, 0, 0);
+  }
+}
+
+/* Pause Marquee on Hover */
+.tb-pause-hover:hover .tb-marquee-content {
+  animation-play-state: paused;
+}
+
+/* ========================================================= */
+/* MODE 2: Centered One-by-One Rotating Slides               */
+/* ========================================================= */
+.tb-rotating-track {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-width: 900px;
+  margin: 0 auto;
+  position: relative;
+  padding: 0 32px;
+}
+
+.tb-rotating-slides {
+  position: relative;
+  width: 100%;
+  min-height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.tb-rotating-slide {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(6px);
+  transition: opacity 0.4s ease, transform 0.4s ease, visibility 0.4s;
+  pointer-events: none;
+  font-weight: 500;
+}
+
+.tb-rotating-slide.tb-active {
+  position: relative;
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+/* Rotator Prev/Next Arrows */
+.tb-rotator-arrow {
+  background: transparent;
+  border: none;
+  color: inherit;
+  font-size: 18px;
+  line-height: 1;
+  padding: 4px 8px;
+  cursor: pointer;
+  opacity: 0.6;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tb-rotator-arrow:hover {
+  opacity: 1;
+  transform: scale(1.15);
+}
+
+/* ========================================================= */
+/* MODE 3: Static Centered Single Announcement               */
+/* ========================================================= */
+.tb-static-center {
+  width: 100%;
+  text-align: center;
+  font-weight: 500;
+  padding: 0 24px;
+}
+
+/* ========================================================= */
+/* Close / Dismiss Button                                    */
+/* ========================================================= */
+.tb-announcement-close {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  color: inherit;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0.7;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.tb-announcement-close:hover {
+  opacity: 1;
+  transform: translateY(-50%) scale(1.1);
+}
+
+/* Accessibility & Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  .tb-marquee-content {
+    animation: none !important;
+  }
+  .tb-rotating-slide {
+    transition: none !important;
+  }
+}

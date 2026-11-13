@@ -5,6 +5,7 @@ declare global {
   var __memoryBundles: any[] | undefined;
   var __memoryStickyCartSettings: Map<string, StickyCartSettings> | undefined;
   var __memoryCartDrawerSettings: Map<string, CartDrawerSettings> | undefined;
+  var __memoryAnnouncementBarSettings: Map<string, AnnouncementBarSettings> | undefined;
 }
 
 export interface StickyCartSettings {
@@ -84,6 +85,46 @@ export interface CartDrawerSettings {
   drawerWidth: number;
 }
 
+export interface AnnouncementBarMessage {
+  id: string;
+  text: string;
+  link?: string;
+}
+
+export interface AnnouncementBarSettings {
+  enabled: boolean;
+  mode: "marquee" | "rotating" | "static";
+  messages: AnnouncementBarMessage[];
+  bgColor: string;
+  textColor: string;
+  fontSize: number;
+  isSticky: boolean;
+  showCloseButton: boolean;
+  rotationInterval: number;
+  marqueeSpeed: number;
+  pauseOnHover: boolean;
+  deviceTarget: "all" | "desktop" | "mobile";
+}
+
+export const defaultAnnouncementBarSettings: AnnouncementBarSettings = {
+  enabled: true,
+  mode: "rotating",
+  messages: [
+    { id: "msg-1", text: "🎉 Free Shipping on all orders over $50!", link: "" },
+    { id: "msg-2", text: "⚡ Use code WELCOME10 for 10% OFF your first order", link: "" },
+    { id: "msg-3", text: "⭐ 30-Day Money-Back Guarantee & Easy Returns", link: "" },
+  ],
+  bgColor: "#111827",
+  textColor: "#ffffff",
+  fontSize: 13,
+  isSticky: false,
+  showCloseButton: false,
+  rotationInterval: 4,
+  marqueeSpeed: 25,
+  pauseOnHover: true,
+  deviceTarget: "all",
+};
+
 export const defaultStickyCartSettings: StickyCartSettings = {
   enabled: true,
   position: "bottom",
@@ -154,6 +195,9 @@ globalThis.__memoryStickyCartSettings = settingsMap;
 const cartDrawerSettingsMap = globalThis.__memoryCartDrawerSettings || new Map<string, CartDrawerSettings>();
 globalThis.__memoryCartDrawerSettings = cartDrawerSettingsMap;
 
+const announcementBarSettingsMap = globalThis.__memoryAnnouncementBarSettings || new Map<string, AnnouncementBarSettings>();
+globalThis.__memoryAnnouncementBarSettings = announcementBarSettingsMap;
+
 export function getStickyCartSettings(shop: string): StickyCartSettings {
   if (shop && settingsMap.has(shop)) {
     return { ...defaultStickyCartSettings, ...settingsMap.get(shop) };
@@ -182,6 +226,22 @@ export function saveCartDrawerSettings(shop: string, settings: Partial<CartDrawe
   const updated: CartDrawerSettings = { ...current, ...settings };
   if (shop) {
     cartDrawerSettingsMap.set(shop, updated);
+  }
+  return updated;
+}
+
+export function getAnnouncementBarSettings(shop: string): AnnouncementBarSettings {
+  if (shop && announcementBarSettingsMap.has(shop)) {
+    return { ...defaultAnnouncementBarSettings, ...announcementBarSettingsMap.get(shop) };
+  }
+  return { ...defaultAnnouncementBarSettings };
+}
+
+export function saveAnnouncementBarSettings(shop: string, settings: Partial<AnnouncementBarSettings>): AnnouncementBarSettings {
+  const current = getAnnouncementBarSettings(shop);
+  const updated: AnnouncementBarSettings = { ...current, ...settings };
+  if (shop) {
+    announcementBarSettingsMap.set(shop, updated);
   }
   return updated;
 }

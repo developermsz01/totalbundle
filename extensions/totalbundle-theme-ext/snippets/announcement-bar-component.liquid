@@ -1,0 +1,143 @@
+{% comment %}
+  TotalBundle - Announcement Bar Component
+  Multi-mode announcement bar with scrolling marquee, centered one-by-one rotator, and static center display.
+  Zero customizer clutter - all settings managed in TotalBundles App Dashboard.
+{% endcomment %}
+
+{%- liquid
+  assign bar_settings = app.metafields.announcement_bar.settings.value
+  if bar_settings == blank
+    assign bar_settings = shop.metafields.announcement_bar.settings.value
+  endif
+
+  assign is_enabled = true
+  if bar_settings != blank and bar_settings.enabled == false
+    assign is_enabled = false
+  endif
+
+  assign mode = bar_settings.mode | default: 'rotating'
+  assign bg_color = bar_settings.bgColor | default: '#111827'
+  assign text_color = bar_settings.textColor | default: '#ffffff'
+  assign font_size = bar_settings.fontSize | default: 13
+  assign is_sticky = bar_settings.isSticky | default: false
+  assign show_close = bar_settings.showCloseButton | default: false
+  assign rotation_interval = bar_settings.rotationInterval | default: 4
+  assign marquee_speed = bar_settings.marqueeSpeed | default: 25
+  assign pause_on_hover = bar_settings.pauseOnHover
+  if pause_on_hover == nil
+    assign pause_on_hover = true
+  endif
+  assign device_target = bar_settings.deviceTarget | default: 'all'
+
+  assign messages = bar_settings.messages
+-%}
+
+{%- if is_enabled -%}
+  <div
+    id="tb-announcement-bar"
+    class="tb-announcement-bar{% if is_sticky %} tb-is-sticky{% endif %}{% if pause_on_hover %} tb-pause-hover{% endif %} tb-device-{{ device_target }}"
+    role="region"
+    aria-label="Announcement"
+    data-mode="{{ mode }}"
+    data-rotation-interval="{{ rotation_interval }}"
+    data-marquee-speed="{{ marquee_speed }}"
+    style="
+      --tb-announcement-bg: {{ bg_color }};
+      --tb-announcement-color: {{ text_color }};
+      --tb-announcement-size: {{ font_size }}px;
+      --tb-marquee-duration: {{ marquee_speed }}s;
+    "
+  >
+    <div class="tb-announcement-inner">
+      {%- if mode == 'marquee' -%}
+        <!-- Mode 1: Continuous Horizontal Scrolling Marquee Ticker -->
+        <div class="tb-marquee-track" aria-hidden="false">
+          <div class="tb-marquee-content">
+            {%- if messages != blank and messages.size > 0 -%}
+              {%- for msg in messages -%}
+                <span class="tb-marquee-item">
+                  {%- if msg.link != blank -%}
+                    <a href="{{ msg.link | escape }}" class="tb-announcement-link">{{ msg.text | escape }}</a>
+                  {%- else -%}
+                    <span>{{ msg.text | escape }}</span>
+                  {%- endif -%}
+                </span>
+              {%- endfor -%}
+            {%- else -%}
+              <span class="tb-marquee-item">🎉 Free Shipping on all orders over $50!</span>
+              <span class="tb-marquee-item">⚡ Use code WELCOME10 for 10% OFF your first order</span>
+              <span class="tb-marquee-item">⭐ 30-Day Money-Back Guarantee & Easy Returns</span>
+            {%- endif -%}
+          </div>
+          <!-- Duplicate content for seamless continuous looping -->
+          <div class="tb-marquee-content" aria-hidden="true">
+            {%- if messages != blank and messages.size > 0 -%}
+              {%- for msg in messages -%}
+                <span class="tb-marquee-item">
+                  {%- if msg.link != blank -%}
+                    <a href="{{ msg.link | escape }}" class="tb-announcement-link">{{ msg.text | escape }}</a>
+                  {%- else -%}
+                    <span>{{ msg.text | escape }}</span>
+                  {%- endif -%}
+                </span>
+              {%- endfor -%}
+            {%- else -%}
+              <span class="tb-marquee-item">🎉 Free Shipping on all orders over $50!</span>
+              <span class="tb-marquee-item">⚡ Use code WELCOME10 for 10% OFF your first order</span>
+              <span class="tb-marquee-item">⭐ 30-Day Money-Back Guarantee & Easy Returns</span>
+            {%- endif -%}
+          </div>
+        </div>
+
+      {%- elsif mode == 'rotating' -%}
+        <!-- Mode 2: Centered One-by-One Changing Rotating Text -->
+        <div class="tb-rotating-track">
+          <button type="button" class="tb-rotator-arrow tb-rotator-prev" aria-label="Previous announcement">‹</button>
+          <div class="tb-rotating-slides">
+            {%- if messages != blank and messages.size > 0 -%}
+              {%- for msg in messages -%}
+                <div class="tb-rotating-slide{% if forloop.first %} tb-active{% endif %}" data-slide-index="{{ forloop.index0 }}">
+                  {%- if msg.link != blank -%}
+                    <a href="{{ msg.link | escape }}" class="tb-announcement-link">{{ msg.text | escape }}</a>
+                  {%- else -%}
+                    <span>{{ msg.text | escape }}</span>
+                  {%- endif -%}
+                </div>
+              {%- endfor -%}
+            {%- else -%}
+              <div class="tb-rotating-slide tb-active" data-slide-index="0">
+                <span>🎉 Free Shipping on all orders over $50!</span>
+              </div>
+              <div class="tb-rotating-slide" data-slide-index="1">
+                <span>⚡ Use code WELCOME10 for 10% OFF your first order</span>
+              </div>
+              <div class="tb-rotating-slide" data-slide-index="2">
+                <span>⭐ 30-Day Money-Back Guarantee & Easy Returns</span>
+              </div>
+            {%- endif -%}
+          </div>
+          <button type="button" class="tb-rotator-arrow tb-rotator-next" aria-label="Next announcement">›</button>
+        </div>
+
+      {%- else -%}
+        <!-- Mode 3: Static Centered Single Announcement -->
+        <div class="tb-static-center">
+          {%- if messages != blank and messages.size > 0 -%}
+            {%- assign first_msg = messages.first -%}
+            {%- if first_msg.link != blank -%}
+              <a href="{{ first_msg.link | escape }}" class="tb-announcement-link">{{ first_msg.text | escape }}</a>
+            {%- else -%}
+              <span>{{ first_msg.text | escape }}</span>
+            {%- endif -%}
+          {%- else -%}
+            <span>🎉 Free Shipping on all orders over $50!</span>
+          {%- endif -%}
+        </div>
+      {%- endif -%}
+
+      {%- if show_close -%}
+        <button type="button" class="tb-announcement-close" aria-label="Close announcement bar">×</button>
+      {%- endif -%}
+    </div>
+  </div>
+{%- endif -%}

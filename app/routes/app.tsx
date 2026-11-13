@@ -38,6 +38,9 @@ export default function App() {
         <Link to="/app/cart-drawer">
           Cart Drawer
         </Link>
+        <Link to="/app/announcement-bar">
+          Announcement Bar
+        </Link>
         <Link to="/app/additional">Documentation</Link>
       </NavMenu>
       <Outlet />
