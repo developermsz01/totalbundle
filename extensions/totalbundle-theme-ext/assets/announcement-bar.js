@@ -137,46 +137,51 @@
   };
 
   TotalBundleAnnouncementBar.prototype.mountAtTop = function () {
-    if (!this.bar) return;
+    if (!this.bar || !document.body) return;
+
+    // 1. Hide theme native announcement bars specifically
     var themeSelectors = [
       'announcement-bar',
       '.announcement-bar:not(#tb-announcement-bar):not(.tb-announcement-bar)',
       '.announcement-bar-section',
       '[data-section-type="announcement-bar"]',
       '[data-section-type="header-announcements"]',
-      '#shopify-section-announcement-bar',
-      '[id*="shopify-section-announcement-bar"]',
-      '[id*="shopify-section-sections--announcement_bar"]',
-      '[id*="shopify-section-sections--"][id*="announcement"]',
-      '[id*="announcement-bar"]:not(#tb-announcement-bar):not([id*="tb-announcement"])',
       '.site-header__announcement',
       '.header-announcement',
+      '.utility-bar .announcement-bar',
       '.utility-bar'
     ];
-    var themeBar = null;
     for (var i = 0; i < themeSelectors.length; i++) {
-      var found = document.querySelector(themeSelectors[i]);
-      if (found && !found.contains(this.bar) && found !== this.bar) {
-        themeBar = found;
-        break;
-      }
+      try {
+        var elements = document.querySelectorAll(themeSelectors[i]);
+        for (var j = 0; j < elements.length; j++) {
+          if (!elements[j].contains(this.bar) && elements[j] !== this.bar) {
+            elements[j].style.setProperty('display', 'none', 'important');
+            elements[j].style.setProperty('visibility', 'hidden', 'important');
+            elements[j].style.setProperty('height', '0px', 'important');
+            elements[j].style.setProperty('min-height', '0px', 'important');
+            elements[j].style.setProperty('padding', '0px', 'important');
+            elements[j].style.setProperty('margin', '0px', 'important');
+          }
+        }
+      } catch (e) {}
     }
 
-    if (themeBar && themeBar.parentNode) {
-      themeBar.style.setProperty('display', 'none', 'important');
-      if (this.bar.nextSibling !== themeBar) {
-        themeBar.parentNode.insertBefore(this.bar, themeBar);
+    // 2. ALWAYS hoist bar directly into document.body at the top, NEVER inside a theme section!
+    var topHeader = document.querySelector('header-group, .shopify-section-group-header-group, header, #shopify-section-header, .site-header');
+    if (topHeader && topHeader.parentNode === document.body) {
+      if (this.bar.nextSibling !== topHeader) {
+        document.body.insertBefore(this.bar, topHeader);
       }
-    } else if (document.body) {
-      var header = document.querySelector('header, .header, #shopify-section-header, .site-header, [data-section-type="header"]');
-      if (header && header.parentNode && header.parentNode === document.body) {
-        if (this.bar.nextSibling !== header) {
-          document.body.insertBefore(this.bar, header);
-        }
-      } else if (document.body.firstChild && document.body.firstChild !== this.bar) {
-        document.body.insertBefore(this.bar, document.body.firstChild);
-      }
+    } else if (document.body.firstChild && document.body.firstChild !== this.bar) {
+      document.body.insertBefore(this.bar, document.body.firstChild);
+    } else {
+      document.body.appendChild(this.bar);
     }
+
+    // 3. Ensure the bar itself is explicitly visible
+    this.bar.style.setProperty('display', 'block', 'important');
+    this.bar.style.setProperty('visibility', 'visible', 'important');
   };
 
   TotalBundleAnnouncementBar.prototype.fetchLiveSettings = function () {

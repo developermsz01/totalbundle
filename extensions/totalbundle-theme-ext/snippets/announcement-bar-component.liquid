@@ -36,21 +36,13 @@
   <style id="tb-announcement-bar-theme-override">
     /* Instant theme announcement bar suppression */
     announcement-bar,
-    .announcement-bar:not(#tb-announcement-bar):not(.tb-announcement-bar),
-    .announcement-bar-section,
-    .announcement-bar-wrapper:not(#tb-announcement-bar),
-    [data-section-type="announcement-bar"],
-    [data-section-type="header-announcements"],
-    #shopify-section-announcement-bar,
-    [id*="shopify-section-announcement-bar"],
-    [id*="shopify-section-sections--announcement_bar"],
-    [id*="shopify-section-sections--"][id*="announcement"],
-    [id*="announcement-bar"]:not(#tb-announcement-bar):not([id*="tb-announcement"]),
-    [id*="announcement_bar"]:not(#tb-announcement-bar):not([id*="tb-announcement"]),
+    .announcement-bar:not(.tb-announcement-bar),
+    .utility-bar .announcement-bar,
+    .announcement-bar-section:not(:has(#tb-announcement-bar)),
+    [data-section-type="announcement-bar"]:not(:has(#tb-announcement-bar)),
+    [data-section-type="header-announcements"]:not(:has(#tb-announcement-bar)),
     .site-header__announcement,
-    .header-announcement,
-    .utility-bar:not(:has(:not(.announcement-bar))),
-    .utility-bar .announcement-bar {
+    .header-announcement {
       display: none !important;
       visibility: hidden !important;
       height: 0 !important;
@@ -59,6 +51,27 @@
       padding: 0 !important;
       overflow: hidden !important;
       pointer-events: none !important;
+    }
+
+    /* Guarantee TotalBundle Announcement Bar is visibly displayed */
+    #tb-announcement-bar,
+    .tb-announcement-bar {
+      display: block !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+      position: relative !important;
+      z-index: 2147483640 !important;
+      width: 100% !important;
+      box-sizing: border-box !important;
+    }
+
+    #tb-announcement-bar.tb-is-sticky {
+      position: sticky !important;
+      top: 0 !important;
+    }
+
+    #tb-announcement-bar[data-dismissed="true"] {
+      display: none !important;
     }
   </style>
 
@@ -174,43 +187,53 @@
     (function () {
       function mountTop() {
         var bar = document.getElementById('tb-announcement-bar');
-        if (!bar) return;
+        if (!bar || !document.body) return;
+
+        // 1. Hide theme native announcement bars specifically
         var themeSelectors = [
           'announcement-bar',
           '.announcement-bar:not(#tb-announcement-bar):not(.tb-announcement-bar)',
           '.announcement-bar-section',
           '[data-section-type="announcement-bar"]',
-          '[id*="shopify-section-announcement-bar"]',
-          '[id*="shopify-section-sections--announcement_bar"]',
-          '[id*="shopify-section-sections--"][id*="announcement"]',
+          '[data-section-type="header-announcements"]',
           '.site-header__announcement',
           '.header-announcement',
+          '.utility-bar .announcement-bar',
           '.utility-bar'
         ];
-        var themeBar = null;
         for (var i = 0; i < themeSelectors.length; i++) {
-          var found = document.querySelector(themeSelectors[i]);
-          if (found && !found.contains(bar) && found !== bar) {
-            themeBar = found;
-            break;
-          }
-        }
-        if (themeBar && themeBar.parentNode) {
-          themeBar.style.setProperty('display', 'none', 'important');
-          if (bar.nextSibling !== themeBar) {
-            themeBar.parentNode.insertBefore(bar, themeBar);
-          }
-        } else if (document.body) {
-          var header = document.querySelector('header, .header, #shopify-section-header, .site-header, [data-section-type="header"]');
-          if (header && header.parentNode && header.parentNode === document.body) {
-            if (bar.nextSibling !== header) {
-              document.body.insertBefore(bar, header);
+          try {
+            var elements = document.querySelectorAll(themeSelectors[i]);
+            for (var j = 0; j < elements.length; j++) {
+              if (!elements[j].contains(bar) && elements[j] !== bar) {
+                elements[j].style.setProperty('display', 'none', 'important');
+                elements[j].style.setProperty('visibility', 'hidden', 'important');
+                elements[j].style.setProperty('height', '0px', 'important');
+                elements[j].style.setProperty('min-height', '0px', 'important');
+                elements[j].style.setProperty('padding', '0px', 'important');
+                elements[j].style.setProperty('margin', '0px', 'important');
+              }
             }
-          } else if (document.body.firstChild && document.body.firstChild !== bar) {
-            document.body.insertBefore(bar, document.body.firstChild);
-          }
+          } catch (e) {}
         }
+
+        // 2. ALWAYS hoist bar directly into document.body at the top, NEVER inside a theme section!
+        var topHeader = document.querySelector('header-group, .shopify-section-group-header-group, header, #shopify-section-header, .site-header');
+        if (topHeader && topHeader.parentNode === document.body) {
+          if (bar.nextSibling !== topHeader) {
+            document.body.insertBefore(bar, topHeader);
+          }
+        } else if (document.body.firstChild && document.body.firstChild !== bar) {
+          document.body.insertBefore(bar, document.body.firstChild);
+        } else {
+          document.body.appendChild(bar);
+        }
+
+        // 3. Ensure the bar itself is explicitly visible
+        bar.style.setProperty('display', 'block', 'important');
+        bar.style.setProperty('visibility', 'visible', 'important');
       }
+
       mountTop();
       if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', mountTop);

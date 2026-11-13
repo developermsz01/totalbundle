@@ -9,20 +9,12 @@
 /* ======================================================== */
 announcement-bar,
 .announcement-bar:not(#tb-announcement-bar):not(.tb-announcement-bar),
-.announcement-bar-section,
-.announcement-bar-wrapper:not(#tb-announcement-bar),
-[data-section-type="announcement-bar"],
-[data-section-type="header-announcements"],
-#shopify-section-announcement-bar,
-[id*="shopify-section-announcement-bar"],
-[id*="shopify-section-sections--announcement_bar"],
-[id*="shopify-section-sections--"][id*="announcement"],
-[id*="announcement-bar"]:not(#tb-announcement-bar):not([id*="tb-announcement"]),
-[id*="announcement_bar"]:not(#tb-announcement-bar):not([id*="tb-announcement"]),
+.utility-bar .announcement-bar,
+.announcement-bar-section:not(:has(#tb-announcement-bar)),
+[data-section-type="announcement-bar"]:not(:has(#tb-announcement-bar)),
+[data-section-type="header-announcements"]:not(:has(#tb-announcement-bar)),
 .site-header__announcement,
-.header-announcement,
-.utility-bar:not(:has(:not(.announcement-bar))),
-.utility-bar .announcement-bar {
+.header-announcement {
   display: none !important;
   visibility: hidden !important;
   height: 0 !important;
@@ -31,6 +23,27 @@ announcement-bar,
   padding: 0 !important;
   overflow: hidden !important;
   pointer-events: none !important;
+}
+
+/* Force TotalBundle Announcement Bar to be visibly displayed */
+#tb-announcement-bar,
+.tb-announcement-bar {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  position: relative !important;
+  z-index: 2147483640 !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+#tb-announcement-bar.tb-is-sticky {
+  position: sticky !important;
+  top: 0 !important;
+}
+
+#tb-announcement-bar[data-dismissed="true"] {
+  display: none !important;
 }
 
 :root {
