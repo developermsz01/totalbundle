@@ -2239,7 +2239,7 @@ export function TotalBundleDashboard({ forcedFeature }: { forcedFeature?: "stick
           <BlockStack gap="400">
             {/* Stepper Navigation */}
             <Card padding="300">
-              <InlineStack gap="200" align="space-between" blockAlign="center" wrap>
+              <InlineStack gap="300" align="start" blockAlign="center" wrap>
                 {ANNOUNCEMENT_STEPS.map((s) => {
                   const isCurrent = announcementStep === s.id;
                   const isPassed = announcementStep > s.id;
@@ -2663,9 +2663,14 @@ export function TotalBundleDashboard({ forcedFeature }: { forcedFeature?: "stick
 
                       <InlineStack gap="300">
                         {announcementStep < 2 ? (
-                          <Button variant="primary" onClick={() => setAnnouncementStep(announcementStep + 1)}>
-                            Next Step: Design & Controls →
-                          </Button>
+                          <>
+                            <Button loading={isSaving} onClick={handleSaveAnnouncement}>
+                              Save Changes
+                            </Button>
+                            <Button variant="primary" onClick={() => setAnnouncementStep(announcementStep + 1)}>
+                              Next Step: Design & Controls →
+                            </Button>
+                          </>
                         ) : (
                           <Button
                             variant="primary"
