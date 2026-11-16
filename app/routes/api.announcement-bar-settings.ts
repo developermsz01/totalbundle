@@ -5,9 +5,10 @@ import { unauthenticated } from "../shopify.server";
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const url = new URL(request.url);
   const shop = url.searchParams.get("shop") || "";
-  let settings = getAnnouncementBarSettings(shop);
+  let settings = null;
 
   if (shop) {
+    // 1. Try to fetch the live saved settings from Shopify Metafield
     try {
       const auth = await unauthenticated.admin(shop);
       if (auth?.admin) {
@@ -32,11 +33,16 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         const rawJson = appVal || shopVal;
         if (rawJson) {
           const parsed = JSON.parse(rawJson);
+          parsed._saved = true;
           settings = saveAnnouncementBarSettings(shop, parsed);
         }
       }
     } catch (err) {
-      console.warn("[api.announcement-bar-settings] Could not fetch metafield via unauthenticated admin:", err);
+      // In-memory fallback if available for this specific shop
+      if (globalThis.__memoryAnnouncementBarSettings && globalThis.__memoryAnnouncementBarSettings.has(shop)) {
+        settings = getAnnouncementBarSettings(shop);
+        if (settings) settings._saved = true;
+      }
     }
   }
 

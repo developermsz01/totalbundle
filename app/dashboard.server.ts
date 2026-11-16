@@ -318,6 +318,7 @@ export async function handleDashboardAction(request: Request) {
       // Announcement Bar settings
       if (feature === "announcement-bar") {
         const parsed = JSON.parse(String(rawSettings)) as AnnouncementBarSettings;
+        (parsed as any)._saved = true;
         const updated = saveAnnouncementBarSettings(shop, parsed);
 
         // Sync settings to Shopify Metafields (both App Installation and Shop)

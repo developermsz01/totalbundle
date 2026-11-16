@@ -290,14 +290,14 @@
 
   TotalBundleAnnouncementBar.prototype.fetchLiveSettings = function () {
     var self = this;
-    var shopDomain = window.Shopify && window.Shopify.shop ? window.Shopify.shop : '';
+    var shopDomain = (self.bar && self.bar.dataset.shop) ? self.bar.dataset.shop : (window.Shopify && window.Shopify.shop ? window.Shopify.shop : '');
     if (!shopDomain) return;
 
     var apiUrl = 'https://totalbundle.vercel.app/api/announcement-bar-settings?shop=' + encodeURIComponent(shopDomain);
     fetch(apiUrl, { mode: 'cors' })
       .then(function (res) { return res.json(); })
       .then(function (data) {
-        if (data && data.settings) {
+        if (data && data.settings && data.settings._saved) {
           var s = data.settings;
           if (s.enabled === false) {
             self.bar.style.display = 'none';

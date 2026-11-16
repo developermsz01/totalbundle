@@ -7,7 +7,13 @@
 {%- liquid
   assign bar_settings = app.metafields.announcement_bar.settings.value
   if bar_settings == blank
+    assign bar_settings = app.metafields.announcement_bar.settings
+  endif
+  if bar_settings == blank
     assign bar_settings = shop.metafields.announcement_bar.settings.value
+  endif
+  if bar_settings == blank
+    assign bar_settings = shop.metafields.announcement_bar.settings
   endif
 
   assign is_enabled = true
@@ -80,6 +86,7 @@
     class="tb-announcement-bar{% if is_sticky %} tb-is-sticky{% endif %}{% if pause_on_hover %} tb-pause-hover{% endif %} tb-device-{{ device_target }}"
     role="region"
     aria-label="Announcement"
+    data-shop="{{ shop.permanent_domain }}"
     data-mode="{{ mode }}"
     data-rotation-interval="{{ rotation_interval }}"
     data-marquee-speed="{{ marquee_speed }}"
