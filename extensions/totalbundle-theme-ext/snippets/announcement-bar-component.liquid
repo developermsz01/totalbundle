@@ -5,15 +5,15 @@
 {% endcomment %}
 
 {%- liquid
-  assign bar_settings = app.metafields.announcement_bar.settings.value
-  if bar_settings == blank
-    assign bar_settings = app.metafields.announcement_bar.settings
-  endif
-  if bar_settings == blank
-    assign bar_settings = shop.metafields.announcement_bar.settings.value
-  endif
+  assign bar_settings = shop.metafields.announcement_bar.settings.value
   if bar_settings == blank
     assign bar_settings = shop.metafields.announcement_bar.settings
+  endif
+  if bar_settings == blank
+    assign bar_settings = app.metafields.announcement_bar.settings.value
+  endif
+  if bar_settings == blank
+    assign bar_settings = app.metafields.announcement_bar.settings
   endif
 
   assign is_enabled = true
