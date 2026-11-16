@@ -1,18 +1,25 @@
 /**
  * TotalBundle Announcement Bar JavaScript
  * Manages multi-mode announcement bars:
- * - Continuous Marquee Scrolling Ticker
- * - Centered One-by-One Rotating Slides (with auto-timer, prev/next arrows, pause on hover)
- * - Static Center
- * - Dismiss / Close state persistence via sessionStorage
- * - Live real-time settings fallback from app API
+ * - Continuous Marquee Scrolling Ticker  (mode="marquee")
+ * - Centered One-by-One Rotating Slides (mode="rotating")
+ * - Static Centered                     (mode="static")
+ *
+ * The HTML is fully rendered by Liquid (server-side) based on saved metafields.
+ * This JS file ONLY handles:
+ *   1. Hoisting the bar to the top of <body>
+ *   2. Hiding the theme's native announcement bar
+ *   3. Rotating slides timer + prev/next arrows (rotating mode)
+ *   4. Close / dismiss button
+ *   5. Pause-on-hover for marquee
+ *   6. Fetching live settings for enable/disable toggle ONLY (no HTML replacement)
  */
 
 (function () {
   'use strict';
 
   function TotalBundleAnnouncementBar() {
-    // 1. DOM Deduplication
+    // 1. DOM Deduplication - keep only the first bar
     var allBars = document.querySelectorAll('.tb-announcement-bar');
     if (allBars.length > 1) {
       for (var i = 1; i < allBars.length; i++) {
@@ -23,10 +30,10 @@
     this.bar = document.querySelector('.tb-announcement-bar');
     if (!this.bar) return;
 
-    // Immediately replace theme announcement bar & mount at top
+    // Immediately hoist bar to top of body & suppress theme bar
     this.mountAtTop();
 
-    // Check if user previously dismissed this session
+    // Check if user dismissed this session
     try {
       if (sessionStorage.getItem('tb_announcement_dismissed') === 'true') {
         this.bar.style.display = 'none';
@@ -34,11 +41,13 @@
       }
     } catch (e) {}
 
+    // Read mode from Liquid-rendered data attribute (source of truth)
     this.mode = this.bar.dataset.mode || 'rotating';
     this.intervalSeconds = parseFloat(this.bar.dataset.rotationInterval) || 4;
     this.timer = null;
     this.currentIndex = 0;
 
+    // Rotating mode: wire up slides and arrows
     this.slides = Array.prototype.slice.call(this.bar.querySelectorAll('.tb-rotating-slide'));
     this.prevBtn = this.bar.querySelector('.tb-rotator-prev');
     this.nextBtn = this.bar.querySelector('.tb-rotator-next');
@@ -50,7 +59,7 @@
       this.startRotation();
     }
 
-    // Live settings check
+    // Check enable/disable state from API (no HTML clobbering)
     this.fetchLiveSettings();
   }
 
@@ -76,7 +85,6 @@
         self.prevSlide();
       });
     }
-
     if (this.nextBtn) {
       this.nextBtn.addEventListener('click', function (e) {
         e.preventDefault();
@@ -84,13 +92,28 @@
       });
     }
 
-    // Pause on hover
-    if (this.bar.classList.contains('tb-pause-hover')) {
+    // Pause marquee on hover
+    if (this.mode === 'marquee' && this.bar.classList.contains('tb-pause-hover')) {
+      var marqueeContents = this.bar.querySelectorAll('.tb-marquee-content');
+      this.bar.addEventListener('mouseenter', function () {
+        for (var i = 0; i < marqueeContents.length; i++) {
+          marqueeContents[i].style.animationPlayState = 'paused';
+        }
+      });
+      this.bar.addEventListener('mouseleave', function () {
+        for (var i = 0; i < marqueeContents.length; i++) {
+          marqueeContents[i].style.animationPlayState = 'running';
+        }
+      });
+    }
+
+    // Pause rotating on hover
+    if (this.mode === 'rotating' && this.bar.classList.contains('tb-pause-hover')) {
       this.bar.addEventListener('mouseenter', function () {
         self.stopRotation();
       });
       this.bar.addEventListener('mouseleave', function () {
-        if (self.mode === 'rotating' && self.slides.length > 1) {
+        if (self.slides.length > 1) {
           self.startRotation();
         }
       });
@@ -101,7 +124,6 @@
     if (!this.slides || this.slides.length === 0) return;
     if (index >= this.slides.length) index = 0;
     if (index < 0) index = this.slides.length - 1;
-
     for (var i = 0; i < this.slides.length; i++) {
       if (i === index) {
         this.slides[i].classList.add('tb-active');
@@ -139,7 +161,7 @@
   TotalBundleAnnouncementBar.prototype.mountAtTop = function () {
     if (!this.bar || !document.body) return;
 
-    // 1. Hide theme native announcement bars specifically
+    // Hide theme native announcement bars
     var themeSelectors = [
       'announcement-bar',
       '.announcement-bar:not(#tb-announcement-bar):not(.tb-announcement-bar)',
@@ -167,8 +189,10 @@
       } catch (e) {}
     }
 
-    // 2. ALWAYS hoist bar directly into document.body at the top, NEVER inside a theme section!
-    var topHeader = document.querySelector('header-group, .shopify-section-group-header-group, header, #shopify-section-header, .site-header');
+    // ALWAYS hoist bar directly into document.body at the very top
+    var topHeader = document.querySelector(
+      'header-group, .shopify-section-group-header-group, header, #shopify-section-header, .site-header'
+    );
     if (topHeader && topHeader.parentNode === document.body) {
       if (this.bar.nextSibling !== topHeader) {
         document.body.insertBefore(this.bar, topHeader);
@@ -179,145 +203,70 @@
       document.body.appendChild(this.bar);
     }
 
-    // 3. Ensure the bar itself is explicitly visible
+    // Force bar visible
     this.bar.style.setProperty('display', 'block', 'important');
     this.bar.style.setProperty('visibility', 'visible', 'important');
   };
 
-  function escapeHtml(str) {
-    if (!str) return '';
-    return String(str)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#039;');
-  }
-
+  /**
+   * applySettings — kept for API compatibility and future dynamic updates.
+   * Currently NOT called from fetchLiveSettings to avoid clobbering
+   * the Liquid-server-rendered HTML which is the source of truth for mode.
+   * Only call this if you need to fully re-render the bar client-side.
+   */
   TotalBundleAnnouncementBar.prototype.applySettings = function (s) {
     if (!s || !this.bar) return;
 
-    this.mode = s.mode || this.mode || 'rotating';
-    this.bar.dataset.mode = this.mode;
-
-    if (s.rotationInterval) {
-      this.intervalSeconds = parseFloat(s.rotationInterval) || 4;
-    }
-    if (s.marqueeSpeed) {
-      this.bar.style.setProperty('--tb-marquee-duration', (parseFloat(s.marqueeSpeed) || 25) + 's');
-    }
-
-    if (s.bgColor) {
-      this.bar.style.setProperty('--tb-announcement-bg', s.bgColor);
-    }
-    if (s.textColor) {
-      this.bar.style.setProperty('--tb-announcement-color', s.textColor);
-    }
-    if (s.fontSize) {
-      this.bar.style.setProperty('--tb-announcement-size', s.fontSize + 'px');
-    }
-
+    // Apply style variables only — do NOT replace innerHTML
+    if (s.bgColor) this.bar.style.setProperty('--tb-announcement-bg', s.bgColor);
+    if (s.textColor) this.bar.style.setProperty('--tb-announcement-color', s.textColor);
+    if (s.fontSize) this.bar.style.setProperty('--tb-announcement-size', s.fontSize + 'px');
+    if (s.marqueeSpeed) this.bar.style.setProperty('--tb-marquee-duration', (parseFloat(s.marqueeSpeed) || 25) + 's');
     if (s.isSticky) {
       this.bar.classList.add('tb-is-sticky');
     } else {
       this.bar.classList.remove('tb-is-sticky');
     }
-
-    var messages = (s.messages && s.messages.length > 0) ? s.messages : [
-      { text: "🎉 Free Shipping on all orders over $50!", link: "" }
-    ];
-
-    var inner = this.bar.querySelector('.tb-announcement-inner');
-    if (!inner) return;
-
-    // Dynamically render the mode-specific HTML
-    var html = '';
-    if (this.mode === 'marquee') {
-      var itemsHtml = messages.map(function (m) {
-        var content = m.link
-          ? '<a href="' + escapeHtml(m.link) + '" class="tb-announcement-link">' + escapeHtml(m.text) + '</a>'
-          : '<span>' + escapeHtml(m.text) + '</span>';
-        return '<span class="tb-marquee-item">' + content + '</span>';
-      }).join('');
-
-      html = '<div class="tb-marquee-track" aria-hidden="false">' +
-               '<div class="tb-marquee-content">' + itemsHtml + '</div>' +
-               '<div class="tb-marquee-content" aria-hidden="true">' + itemsHtml + '</div>' +
-             '</div>';
-    } else if (this.mode === 'rotating') {
-      var slidesHtml = messages.map(function (m, idx) {
-        var activeClass = idx === 0 ? ' tb-active' : '';
-        var content = m.link
-          ? '<a href="' + escapeHtml(m.link) + '" class="tb-announcement-link">' + escapeHtml(m.text) + '</a>'
-          : '<span>' + escapeHtml(m.text) + '</span>';
-        return '<div class="tb-rotating-slide' + activeClass + '" data-slide-index="' + idx + '">' + content + '</div>';
-      }).join('');
-
-      html = '<div class="tb-rotating-track">' +
-               '<button type="button" class="tb-rotator-arrow tb-rotator-prev" aria-label="Previous announcement">‹</button>' +
-               '<div class="tb-rotating-slides">' + slidesHtml + '</div>' +
-               '<button type="button" class="tb-rotator-arrow tb-rotator-next" aria-label="Next announcement">›</button>' +
-             '</div>';
-    } else {
-      // Static Centered
-      var firstMsg = messages[0] || { text: "🎉 Free Shipping on all orders over $50!", link: "" };
-      var content = firstMsg.link
-        ? '<a href="' + escapeHtml(firstMsg.link) + '" class="tb-announcement-link">' + escapeHtml(firstMsg.text) + '</a>'
-        : '<span>' + escapeHtml(firstMsg.text) + '</span>';
-      html = '<div class="tb-static-center">' + content + '</div>';
-    }
-
-    if (s.showCloseButton) {
-      html += '<button type="button" class="tb-announcement-close" aria-label="Close announcement bar">×</button>';
-    }
-
-    inner.innerHTML = html;
-
-    // Reset controls & timer for the new mode
-    this.stopRotation();
-    this.slides = Array.prototype.slice.call(this.bar.querySelectorAll('.tb-rotating-slide'));
-    this.prevBtn = this.bar.querySelector('.tb-rotator-prev');
-    this.nextBtn = this.bar.querySelector('.tb-rotator-next');
-    this.closeBtn = this.bar.querySelector('.tb-announcement-close');
-    this.currentIndex = 0;
-
-    this.initEvents();
-
-    if (this.mode === 'rotating' && this.slides.length > 1) {
-      this.startRotation();
-    }
+    // For reference: mode-specific HTML containers used in dynamic rendering:
+    // tb-marquee-track (marquee mode), tb-rotating-track (rotating), tb-static-center (static)
   };
 
+  /**
+   * fetchLiveSettings — ONLY used to check enabled/disabled status.
+   * Does NOT replace any HTML. The Liquid template is the sole source of truth
+   * for which mode (marquee / rotating / static) is rendered.
+   */
   TotalBundleAnnouncementBar.prototype.fetchLiveSettings = function () {
     var self = this;
-    var shopDomain = (self.bar && self.bar.dataset.shop) ? self.bar.dataset.shop : (window.Shopify && window.Shopify.shop ? window.Shopify.shop : '');
+    var shopDomain =
+      (self.bar && self.bar.dataset.shop)
+        ? self.bar.dataset.shop
+        : (window.Shopify && window.Shopify.shop ? window.Shopify.shop : '');
     if (!shopDomain) return;
 
-    var apiUrl = 'https://totalbundle.vercel.app/api/announcement-bar-settings?shop=' + encodeURIComponent(shopDomain);
+    var apiUrl =
+      'https://totalbundle.vercel.app/api/announcement-bar-settings?shop=' +
+      encodeURIComponent(shopDomain);
+
     fetch(apiUrl, { mode: 'cors' })
       .then(function (res) { return res.json(); })
       .then(function (data) {
-        if (data && data.settings && data.settings._saved) {
-          var s = data.settings;
-          if (s.enabled === false) {
-            self.bar.style.display = 'none';
-            self.stopRotation();
-            // Restore theme bars
-            var overrideTag = document.getElementById('tb-announcement-bar-theme-override');
-            if (overrideTag) overrideTag.remove();
-            var themeBars = document.querySelectorAll('announcement-bar, .announcement-bar:not(#tb-announcement-bar), .utility-bar');
-            for (var i = 0; i < themeBars.length; i++) {
-              themeBars[i].style.removeProperty('display');
-            }
-            return;
-          }
+        if (!data || !data.settings) return;
+        var s = data.settings;
 
-          self.bar.style.display = 'block';
-          self.mountAtTop();
-          self.applySettings(s);
+        // Only handle enable/disable — never replace HTML
+        if (s.enabled === false) {
+          self.bar.style.display = 'none';
+          self.stopRotation();
+          var overrideTag = document.getElementById('tb-announcement-bar-theme-override');
+          if (overrideTag) overrideTag.remove();
+        } else {
+          self.bar.style.setProperty('display', 'block', 'important');
         }
       })
-      .catch(function () {});
+      .catch(function () {
+        // API unavailable — Liquid-rendered bar stays as-is, which is correct
+      });
   };
 
   function initAnnouncementBar() {
@@ -330,4 +279,3 @@
     initAnnouncementBar();
   }
 })();
-
