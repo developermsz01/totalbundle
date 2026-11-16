@@ -348,6 +348,7 @@ export async function handleDashboardAction(request: Request) {
             }> = [];
 
             const serializedSettings = JSON.stringify(updated);
+            console.log('[AnnouncementBar] Saving metafield. mode=', updated.mode, 'value=', serializedSettings.slice(0, 200));
 
             if (shopId) {
               metafieldsToSet.push({
