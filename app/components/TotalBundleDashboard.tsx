@@ -56,6 +56,7 @@ const defaultAnnouncementBarFallback: AnnouncementBarSettings = {
   marqueeSpeed: 25,
   pauseOnHover: true,
   deviceTarget: "all",
+  continuousLoop: true,
 };
 
 // Wizard Steps for Sticky Add to Cart
@@ -2405,6 +2406,18 @@ export function TotalBundleDashboard({ forcedFeature }: { forcedFeature?: "stick
                               </p>
                             </button>
                           </InlineStack>
+
+                          {/* Loop Option Toggle */}
+                          <div style={{ marginTop: "14px", padding: "12px 16px", backgroundColor: "#f9fafb", borderRadius: "8px", border: "1px solid #e5e7eb" }}>
+                            <Checkbox
+                              label="Continuous Infinite Loop"
+                              helpText="Seamlessly loop announcements without any blank gaps or pauses between cycles."
+                              checked={announcementSettings.continuousLoop !== false}
+                              onChange={(val) =>
+                                setAnnouncementSettings({ ...announcementSettings, continuousLoop: val })
+                              }
+                            />
+                          </div>
                         </BlockStack>
                       </Card>
 
@@ -2609,6 +2622,15 @@ export function TotalBundleDashboard({ forcedFeature }: { forcedFeature?: "stick
                           )}
 
                           <Checkbox
+                            label="Continuous Infinite Loop"
+                            helpText="Keep announcements seamlessly looping without blank gaps or stopping at the end."
+                            checked={announcementSettings.continuousLoop !== false}
+                            onChange={(val) =>
+                              setAnnouncementSettings({ ...announcementSettings, continuousLoop: val })
+                            }
+                          />
+
+                          <Checkbox
                             label="Pause scrolling/rotation on hover"
                             helpText="Pauses animation when shoppers mouse over the bar so they can easily read or click."
                             checked={announcementSettings.pauseOnHover}
@@ -2761,13 +2783,18 @@ export function TotalBundleDashboard({ forcedFeature }: { forcedFeature?: "stick
                           >
                             {announcementSettings.mode === "marquee" ? (
                               <div style={{ whiteSpace: "nowrap", overflow: "hidden", width: "100%", display: "flex", gap: "24px" }}>
-                                <div style={{ animation: "tbDashboardMarquee 15s linear infinite", display: "inline-flex", gap: "24px", whiteSpace: "nowrap" }}>
-                                  {(announcementSettings.messages || []).map((m, idx) => (
-                                    <span key={idx} style={{ display: "inline-block" }}>{m.text}</span>
-                                  ))}
-                                  {(announcementSettings.messages || []).map((m, idx) => (
-                                    <span key={`dup-${idx}`} style={{ display: "inline-block" }}>{m.text}</span>
-                                  ))}
+                                <div style={{ animation: announcementSettings.continuousLoop !== false ? "tbDashboardMarquee 15s linear infinite" : "none", display: "inline-flex", gap: "24px", whiteSpace: "nowrap" }}>
+                                  {[1, 2, 3].map((rep) =>
+                                    (announcementSettings.messages || []).map((m, idx) => (
+                                      <span key={`msg-${rep}-${idx}`} style={{ display: "inline-block" }}>{m.text}</span>
+                                    ))
+                                  )}
+                                  {announcementSettings.continuousLoop !== false &&
+                                    [1, 2, 3].map((rep) =>
+                                      (announcementSettings.messages || []).map((m, idx) => (
+                                        <span key={`dup-${rep}-${idx}`} style={{ display: "inline-block" }}>{m.text}</span>
+                                      ))
+                                    )}
                                 </div>
                                 <style>{`
                                   @keyframes tbDashboardMarquee {

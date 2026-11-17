@@ -34,6 +34,10 @@
     assign pause_on_hover = true
   endif
   assign device_target = bar_settings.deviceTarget | default: 'all'
+  assign continuous_loop = bar_settings.continuousLoop
+  if continuous_loop == nil
+    assign continuous_loop = true
+  endif
 
   assign messages = bar_settings.messages
 -%}
@@ -90,6 +94,7 @@
     data-mode="{{ mode }}"
     data-rotation-interval="{{ rotation_interval }}"
     data-marquee-speed="{{ marquee_speed }}"
+    data-continuous-loop="{{ continuous_loop }}"
     style="
       --tb-announcement-bg: {{ bg_color }};
       --tb-announcement-color: {{ text_color }};
@@ -100,42 +105,45 @@
     <div class="tb-announcement-inner">
       {%- if mode == 'marquee' -%}
         <!-- Mode 1: Continuous Horizontal Scrolling Marquee Ticker -->
-        <div class="tb-marquee-track" aria-hidden="false">
+        {%- capture single_marquee_items -%}
+          {%- if messages != blank and messages.size > 0 -%}
+            {%- for msg in messages -%}
+              <span class="tb-marquee-item">
+                {%- if msg.link != blank -%}
+                  <a href="{{ msg.link | escape }}" class="tb-announcement-link">{{ msg.text | escape }}</a>
+                {%- else -%}
+                  <span>{{ msg.text | escape }}</span>
+                {%- endif -%}
+              </span>
+            {%- endfor -%}
+          {%- else -%}
+            <span class="tb-marquee-item">🎉 Free Shipping on all orders over $50!</span>
+            <span class="tb-marquee-item">⚡ Use code WELCOME10 for 10% OFF your first order</span>
+            <span class="tb-marquee-item">⭐ 30-Day Money-Back Guarantee & Easy Returns</span>
+          {%- endif -%}
+        {%- endcapture -%}
+
+        {%- assign repeat_times = 4 -%}
+        {%- if messages.size == 1 -%}
+          {%- assign repeat_times = 8 -%}
+        {%- elsif messages.size == 2 -%}
+          {%- assign repeat_times = 5 -%}
+        {%- endif -%}
+
+        <div class="tb-marquee-track{% unless continuous_loop %} tb-no-loop{% endunless %}" aria-hidden="false">
           <div class="tb-marquee-content">
-            {%- if messages != blank and messages.size > 0 -%}
-              {%- for msg in messages -%}
-                <span class="tb-marquee-item">
-                  {%- if msg.link != blank -%}
-                    <a href="{{ msg.link | escape }}" class="tb-announcement-link">{{ msg.text | escape }}</a>
-                  {%- else -%}
-                    <span>{{ msg.text | escape }}</span>
-                  {%- endif -%}
-                </span>
-              {%- endfor -%}
-            {%- else -%}
-              <span class="tb-marquee-item">🎉 Free Shipping on all orders over $50!</span>
-              <span class="tb-marquee-item">⚡ Use code WELCOME10 for 10% OFF your first order</span>
-              <span class="tb-marquee-item">⭐ 30-Day Money-Back Guarantee & Easy Returns</span>
-            {%- endif -%}
+            {%- for i in (1..repeat_times) -%}
+              {{ single_marquee_items }}
+            {%- endfor -%}
           </div>
-          <!-- Duplicate content for seamless continuous looping -->
-          <div class="tb-marquee-content" aria-hidden="true">
-            {%- if messages != blank and messages.size > 0 -%}
-              {%- for msg in messages -%}
-                <span class="tb-marquee-item">
-                  {%- if msg.link != blank -%}
-                    <a href="{{ msg.link | escape }}" class="tb-announcement-link">{{ msg.text | escape }}</a>
-                  {%- else -%}
-                    <span>{{ msg.text | escape }}</span>
-                  {%- endif -%}
-                </span>
+          {%- if continuous_loop -%}
+            <!-- Duplicate content for seamless continuous looping without blank space -->
+            <div class="tb-marquee-content" aria-hidden="true">
+              {%- for i in (1..repeat_times) -%}
+                {{ single_marquee_items }}
               {%- endfor -%}
-            {%- else -%}
-              <span class="tb-marquee-item">🎉 Free Shipping on all orders over $50!</span>
-              <span class="tb-marquee-item">⚡ Use code WELCOME10 for 10% OFF your first order</span>
-              <span class="tb-marquee-item">⭐ 30-Day Money-Back Guarantee & Easy Returns</span>
-            {%- endif -%}
-          </div>
+            </div>
+          {%- endif -%}
         </div>
 
       {%- elsif mode == 'rotating' -%}

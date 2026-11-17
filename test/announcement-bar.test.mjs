@@ -109,5 +109,22 @@ describe('Announcement Bar Storefront Theme App Extension Structure', () => {
     assert.ok(content.includes('else if (feature === "sticky-cart")'), 'Must have explicit sticky-cart check');
     assert.ok(content.includes('else if (feature === "announcement-bar")') || content.includes('if (feature === "announcement-bar")'), 'Must have announcement-bar action handler');
   });
+
+  it('supports continuousLoop toggle and prevents blank gap in marquee ticker', () => {
+    const liquidPath = path.join(rootDir, 'extensions/totalbundle-theme-ext/snippets/announcement-bar-component.liquid');
+    const liquidContent = fs.readFileSync(liquidPath, 'utf8');
+    assert.ok(liquidContent.includes('continuous_loop'), 'Liquid must read continuous_loop setting');
+    assert.ok(liquidContent.includes('data-continuous-loop'), 'Liquid must output data-continuous-loop attribute');
+    assert.ok(liquidContent.includes('repeat_times'), 'Liquid must repeat items to prevent blank gap');
+
+    const cssPath = path.join(rootDir, 'extensions/totalbundle-theme-ext/assets/announcement-bar.css');
+    const cssContent = fs.readFileSync(cssPath, 'utf8');
+    assert.ok(cssContent.includes('.tb-marquee-track.tb-no-loop'), 'CSS must define tb-no-loop rule');
+    assert.ok(cssContent.includes('width: max-content'), 'CSS marquee-content must fit max-content to prevent empty gaps');
+
+    const jsPath = path.join(rootDir, 'extensions/totalbundle-theme-ext/assets/announcement-bar.js');
+    const jsContent = fs.readFileSync(jsPath, 'utf8');
+    assert.ok(jsContent.includes('this.continuousLoop'), 'JS must support continuousLoop');
+  });
 });
 

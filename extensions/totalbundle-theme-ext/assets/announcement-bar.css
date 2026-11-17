@@ -129,16 +129,23 @@ announcement-bar,
   display: flex;
   align-items: center;
   flex-shrink: 0;
-  min-width: 100%;
+  width: max-content;
+  min-width: auto;
   gap: 36px;
   padding-right: 36px;
   animation: tb-marquee-scroll var(--tb-marquee-duration, 25s) linear infinite;
+}
+
+.tb-marquee-track.tb-no-loop .tb-marquee-content {
+  animation-iteration-count: 1;
+  animation-fill-mode: forwards;
 }
 
 .tb-marquee-item {
   display: inline-flex;
   align-items: center;
   font-weight: 500;
+  white-space: nowrap;
 }
 
 @keyframes tb-marquee-scroll {

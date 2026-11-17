@@ -43,6 +43,7 @@
 
     // Read mode from Liquid-rendered data attribute (source of truth)
     this.mode = this.bar.dataset.mode || 'rotating';
+    this.continuousLoop = this.bar.dataset.continuousLoop !== 'false';
     this.intervalSeconds = parseFloat(this.bar.dataset.rotationInterval) || 4;
     this.timer = null;
     this.currentIndex = 0;
@@ -122,8 +123,14 @@
 
   TotalBundleAnnouncementBar.prototype.goToSlide = function (index) {
     if (!this.slides || this.slides.length === 0) return;
-    if (index >= this.slides.length) index = 0;
-    if (index < 0) index = this.slides.length - 1;
+    if (index >= this.slides.length) {
+      if (!this.continuousLoop) return;
+      index = 0;
+    }
+    if (index < 0) {
+      if (!this.continuousLoop) return;
+      index = this.slides.length - 1;
+    }
     for (var i = 0; i < this.slides.length; i++) {
       if (i === index) {
         this.slides[i].classList.add('tb-active');
@@ -135,6 +142,10 @@
   };
 
   TotalBundleAnnouncementBar.prototype.nextSlide = function () {
+    if (!this.continuousLoop && this.currentIndex >= this.slides.length - 1) {
+      this.stopRotation();
+      return;
+    }
     this.goToSlide(this.currentIndex + 1);
   };
 

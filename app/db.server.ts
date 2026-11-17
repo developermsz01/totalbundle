@@ -104,6 +104,7 @@ export interface AnnouncementBarSettings {
   marqueeSpeed: number;
   pauseOnHover: boolean;
   deviceTarget: "all" | "desktop" | "mobile";
+  continuousLoop?: boolean;
 }
 
 export const defaultAnnouncementBarSettings: AnnouncementBarSettings = {
@@ -123,6 +124,7 @@ export const defaultAnnouncementBarSettings: AnnouncementBarSettings = {
   marqueeSpeed: 25,
   pauseOnHover: true,
   deviceTarget: "all",
+  continuousLoop: true,
 };
 
 export const defaultStickyCartSettings: StickyCartSettings = {
