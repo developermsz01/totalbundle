@@ -101,5 +101,13 @@ describe('Announcement Bar Storefront Theme App Extension Structure', () => {
     assert.ok(fs.existsSync(apiRoute), 'api.announcement-bar-settings.ts must exist');
     assert.ok(fs.existsSync(appRoute), 'app.announcement-bar.tsx must exist');
   });
+
+  it('dashboard.server.ts handles announcement-bar explicitly without fallthrough to sticky-cart', () => {
+    const dashboardServerPath = path.join(rootDir, 'app/dashboard.server.ts');
+    assert.ok(fs.existsSync(dashboardServerPath));
+    const content = fs.readFileSync(dashboardServerPath, 'utf8');
+    assert.ok(content.includes('else if (feature === "sticky-cart")'), 'Must have explicit sticky-cart check');
+    assert.ok(content.includes('else if (feature === "announcement-bar")') || content.includes('if (feature === "announcement-bar")'), 'Must have announcement-bar action handler');
+  });
 });
 

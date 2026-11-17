@@ -89,6 +89,28 @@ export async function handleDashboardLoader(
             image: v.image?.url || p.featuredMedia?.image?.url || "",
           })),
         }));
+
+        try {
+          const metaRes = await authResult.admin.graphql(`
+            query GetStoredAnnouncementMetafield {
+              currentAppInstallation {
+                metafield(namespace: "announcement_bar", key: "settings") {
+                  value
+                }
+              }
+            }
+          `);
+          const metaData = await metaRes.json();
+          const rawMeta = metaData?.data?.currentAppInstallation?.metafield?.value;
+          if (rawMeta) {
+            try {
+              const parsed = JSON.parse(rawMeta);
+              saveAnnouncementBarSettings(shop, parsed);
+            } catch (e) {}
+          }
+        } catch (metaErr) {
+          console.warn("[handleDashboardLoader] Failed to fetch announcement metafield:", metaErr);
+        }
       } catch (gqlErr) {
         console.warn("[handleDashboardLoader] Failed to fetch store products:", gqlErr);
       }
@@ -231,7 +253,7 @@ export async function handleDashboardAction(request: Request) {
         }
 
         return json({ success: true, feature: "cart-drawer", settings: updated });
-      } else {
+      } else if (feature === "sticky-cart") {
         // Sticky Cart settings
         const parsed = JSON.parse(String(rawSettings)) as StickyCartSettings;
         const updated = saveStickyCartSettings(shop, parsed);
@@ -371,7 +393,7 @@ export async function handleDashboardAction(request: Request) {
             }
 
             if (metafieldsToSet.length > 0) {
-              await admin.graphql(
+              const mutationRes = await admin.graphql(
                 `#graphql
                 mutation SaveAnnouncementBarSettings($metafieldsSetInput: [MetafieldsSetInput!]!) {
                   metafieldsSet(metafields: $metafieldsSetInput) {
@@ -392,6 +414,12 @@ export async function handleDashboardAction(request: Request) {
                   },
                 }
               );
+              const mutationJson = await mutationRes.json();
+              if (mutationJson?.data?.metafieldsSet?.userErrors?.length > 0) {
+                console.error("[dashboard.server] Announcement bar metafield userErrors:", JSON.stringify(mutationJson.data.metafieldsSet.userErrors));
+              } else {
+                console.log("[dashboard.server] Announcement bar metafield saved successfully!");
+              }
             }
           } catch (metafieldError) {
             console.warn("[dashboard.server] Announcement bar metafield sync skipped/failed:", metafieldError);
